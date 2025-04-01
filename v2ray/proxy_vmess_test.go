@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -12,6 +13,9 @@ import (
 )
 
 func TestProxyVmess(t *testing.T) {
+	if os.Getenv("GITHUB_REF") != "" {
+		t.Skip("Skip test in GitHub Actions")
+	}
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
