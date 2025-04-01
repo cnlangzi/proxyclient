@@ -11,7 +11,7 @@ func init() {
 }
 
 func ProxyHTTP(u *url.URL, o *Options) http.RoundTripper {
-	tr := createTransport(o)
+	tr := CreateTransport(o)
 	tr.Proxy = http.ProxyURL(u)
 
 	return tr

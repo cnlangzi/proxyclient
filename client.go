@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 var (
@@ -24,7 +25,12 @@ func New(proxyURL string, options ...Option) (*http.Client, error) {
 	}
 
 	if opt.Transport == nil {
-		opt.Transport = &http.Transport{}
+		opt.Transport = &http.Transport{
+			DisableKeepAlives:   false,
+			MaxIdleConns:        100,
+			IdleConnTimeout:     90 * time.Second,
+			TLSHandshakeTimeout: 30 * time.Second,
+		}
 	}
 
 	if opt.Timeout > 0 {

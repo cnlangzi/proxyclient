@@ -84,4 +84,4 @@ func main() {
 
 --- 
 
-Explore the full documentation on [GitHub](https://github.com/cnlangzi/proxyclient). Contributions welcome! 🚀
+Contributions welcome! 🚀

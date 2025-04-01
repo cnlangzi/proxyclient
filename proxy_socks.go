@@ -2,6 +2,7 @@ package proxyclient
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,8 +20,7 @@ func init() {
 }
 
 func ProxySocks5(u *url.URL, o *Options) http.RoundTripper {
-
-	tr := createTransport(o)
+	tr := CreateTransport(o)
 
 	dialer := &net.Dialer{}
 
@@ -41,13 +41,45 @@ func ProxySocks5(u *url.URL, o *Options) http.RoundTripper {
 
 	xd := d.(proxy.ContextDialer)
 	tr.DialContext = xd.DialContext
-	tr.DialTLSContext = xd.DialContext
+	tr.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := xd.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		tlsConfig := tr.TLSClientConfig
+		if tlsConfig == nil {
+			tlsConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
+
+		tlsConfig = tlsConfig.Clone()
+		tlsConfig.ServerName = host
+
+		tlsConn := tls.Client(conn, tlsConfig)
+
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
+			tlsConn.Close()
+			return nil, err
+		}
+
+		return tlsConn, nil
+	}
+
+	tr.Proxy = nil
 
 	return tr
 }
 
 func ProxySocks4(u *url.URL, o *Options) http.RoundTripper {
-	tr := createTransport(o)
+	tr := CreateTransport(o)
 
 	proxyURL := u.String()
 
