@@ -26,7 +26,7 @@ func TestProxyVmess(t *testing.T) {
 	}
 
 	t.Run("http", func(t *testing.T) {
-		testURL := "http://ifconfig.me/ip"
+		testURL := "http://ifconfig.io/ip"
 		req, err := http.NewRequest("GET", testURL, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
@@ -47,7 +47,7 @@ func TestProxyVmess(t *testing.T) {
 	})
 
 	t.Run("https", func(t *testing.T) {
-		testURL := "https://ifconfig.me/ip"
+		testURL := "https://ifconfig.io/ip"
 		req, err := http.NewRequest("GET", testURL, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
