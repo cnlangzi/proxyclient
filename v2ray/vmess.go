@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/cnlangzi/proxyclient"
@@ -218,67 +217,17 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	// Configure transport based on network type
 	switch strings.ToLower(vmess.Net) {
 	case "ws":
-		ss.WSSettings = &WSSettings{
-			Path: vmess.Path,
-		}
-		if vmess.Host != "" {
-			ss.WSSettings.Headers = map[string]string{
-				"Host": vmess.Host,
-			}
-		}
+		configureWS(ss, vmess)
 	case "tcp":
-		if vmess.Type == "http" {
-			ss.TCPSettings = &TCPSettings{
-				Header: &Header{
-					Type: "http",
-					Request: &HeaderItem{
-						Version: "1.1",
-						Method:  "GET",
-						Path:    []string{vmess.Path},
-						Headers: map[string][]string{},
-					},
-				},
-			}
-			if vmess.Host != "" {
-				ss.TCPSettings.Header.Request.Headers["Host"] = []string{vmess.Host}
-			}
-		}
+		configureTCP(vmess, ss)
 	case "kcp":
-		ss.KCPSettings = &KCPSettings{
-			MTU:              1350,
-			TTI:              20,
-			UplinkCapacity:   5,
-			DownlinkCapacity: 20,
-			Congestion:       false,
-			ReadBufferSize:   1,
-			WriteBufferSize:  1,
-		}
-		if vmess.Type != "" {
-			ss.KCPSettings.Header = &Header{
-				Type: vmess.Type,
-			}
-		}
+		configureKCP(ss, vmess)
 	case "http":
-		ss.HTTPSettings = &HTTPSettings{
-			Path: vmess.Path,
-		}
-		if vmess.Host != "" {
-			ss.HTTPSettings.Host = []string{vmess.Host}
-		}
+		configureHTTP(ss, vmess)
 	case "quic":
-		ss.QUICSettings = &QUICSettings{
-			Security: "none",
-		}
-		if vmess.Type != "" {
-			ss.QUICSettings.Header = &Header{
-				Type: vmess.Type,
-			}
-		}
+		configureQUIC(ss, vmess)
 	case "grpc":
-		ss.GRPCSettings = &GRPCSettings{
-			ServiceName: vmess.Path,
-			MultiMode:   false,
-		}
+		configureGRPC(ss, vmess)
 	}
 
 	// Configure TLS if needed
@@ -295,6 +244,80 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	return ss
 }
 
+func configureGRPC(ss *StreamSettings, vmess *VmessConfig) {
+	ss.GRPCSettings = &GRPCSettings{
+		ServiceName: vmess.Path,
+		MultiMode:   false,
+	}
+}
+
+func configureQUIC(ss *StreamSettings, vmess *VmessConfig) {
+	ss.QUICSettings = &QUICSettings{
+		Security: "none",
+	}
+	if vmess.Type != "" {
+		ss.QUICSettings.Header = &Header{
+			Type: vmess.Type,
+		}
+	}
+}
+
+func configureHTTP(ss *StreamSettings, vmess *VmessConfig) {
+	ss.HTTPSettings = &HTTPSettings{
+		Path: vmess.Path,
+	}
+	if vmess.Host != "" {
+		ss.HTTPSettings.Host = []string{vmess.Host}
+	}
+}
+
+func configureKCP(ss *StreamSettings, vmess *VmessConfig) {
+	ss.KCPSettings = &KCPSettings{
+		MTU:              1350,
+		TTI:              20,
+		UplinkCapacity:   5,
+		DownlinkCapacity: 20,
+		Congestion:       false,
+		ReadBufferSize:   1,
+		WriteBufferSize:  1,
+	}
+	if vmess.Type != "" {
+		ss.KCPSettings.Header = &Header{
+			Type: vmess.Type,
+		}
+	}
+}
+
+func configureTCP(vmess *VmessConfig, ss *StreamSettings) {
+	if vmess.Type == "http" {
+		ss.TCPSettings = &TCPSettings{
+			Header: &Header{
+				Type: "http",
+				Request: &HeaderItem{
+					Version: "1.1",
+					Method:  "GET",
+					Path:    []string{vmess.Path},
+					Headers: map[string][]string{},
+				},
+			},
+		}
+		if vmess.Host != "" {
+			ss.TCPSettings.Header.Request.Headers["Host"] = []string{vmess.Host}
+		}
+	}
+}
+
+func configureWS(ss *StreamSettings, vmess *VmessConfig) {
+	ss.WSSettings = &WSSettings{
+		Path: vmess.Path,
+	}
+	if vmess.Host != "" {
+		ss.WSSettings.Headers = map[string]string{
+			"Host": vmess.Host,
+		}
+	}
+}
+
 // StartVmess loads the config and starts a V2Ray instance
 func StartVmess(vmessURL string, port int) (*core.Instance, int, error) {
 
@@ -306,7 +329,6 @@ func StartVmess(vmessURL string, port int) (*core.Instance, int, error) {
 	// Get JSON configuration
 	jsonConfig, port, err := VmessToV2Ray(vmessURL, port)
 	if err != nil {
-		log.Fatalf("Failed to convert VMess URL: %v", err)
 		return nil, 0, err
 	}
 

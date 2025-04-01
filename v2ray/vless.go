@@ -3,7 +3,6 @@ package v2ray
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -332,7 +331,6 @@ func StartVless(vlessURL string, port int) (*core.Instance, int, error) {
 	// Get JSON configuration
 	jsonConfig, port, err := VlessToV2Ray(vlessURL, port)
 	if err != nil {
-		log.Fatalf("Failed to convert VLESS URL: %v", err)
 		return nil, 0, err
 	}
 
