@@ -172,8 +172,9 @@ type HeaderItem struct {
 }
 
 type Mux struct {
-	Enabled     bool `json:"enabled"`
-	Concurrency int  `json:"concurrency,omitempty"`
+	Enabled     bool   `json:"enabled"`
+	Concurrency int    `json:"concurrency,omitempty"`
+	Protocol    string `json:"protocol,omitempty"`
 }
 
 type PolicyConfig struct {

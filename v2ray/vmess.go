@@ -14,8 +14,8 @@ import (
 	_ "github.com/v2fly/v2ray-core/v5/main/distro/all"
 )
 
-// Enhanced VMessConfig to support more features
-type VMessConfig struct {
+// Enhanced VmessConfig to support more features
+type VmessConfig struct {
 	Add      string              `json:"add"`
 	Port     proxyclient.JsonInt `json:"port"`
 	ID       string              `json:"id"`
@@ -44,7 +44,7 @@ func VmessToV2Ray(vmessURL string, port int) ([]byte, int, error) {
 	}
 
 	// Unmarshal to VMessConfig
-	var vmess VMessConfig
+	var vmess VmessConfig
 	if err := json.Unmarshal(decoded, &vmess); err != nil {
 		return nil, 0, fmt.Errorf("JSON parsing failed: %w", err)
 	}
@@ -73,7 +73,7 @@ func base64Decode(encoded string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(encoded)
 }
 
-func createCompleteConfig(vmess *VMessConfig, port int) *V2RayConfig {
+func createCompleteConfig(vmess *VmessConfig, port int) *V2RayConfig {
 	// Create a more complete configuration
 	config := &V2RayConfig{
 		Log: &LogConfig{
@@ -160,6 +160,7 @@ func createCompleteConfig(vmess *VMessConfig, port int) *V2RayConfig {
 				Mux: &Mux{
 					Enabled:     true,
 					Concurrency: 8,
+					Protocol:    "auto",
 				},
 			},
 			{
@@ -201,14 +202,14 @@ func createCompleteConfig(vmess *VMessConfig, port int) *V2RayConfig {
 	return config
 }
 
-func getSecurityMethod(vmess *VMessConfig) string {
+func getSecurityMethod(vmess *VmessConfig) string {
 	if vmess.Security != "" {
 		return vmess.Security
 	}
 	return "auto"
 }
 
-func buildEnhancedStreamSettings(vmess *VMessConfig) *StreamSettings {
+func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	ss := &StreamSettings{
 		Network:  vmess.Net,
 		Security: "none",
