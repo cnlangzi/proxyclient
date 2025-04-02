@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/cnlangzi/proxyclient"
 )
@@ -14,13 +13,12 @@ func init() {
 }
 
 // ProxyTrojan creates a RoundTripper for Trojan proxy
-func ProxyTrojan(u *url.URL, o *proxyclient.Options) http.RoundTripper {
+func ProxyTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
 	// Start Trojan instance
 	_, port, err := StartTrojan(u.String(), 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to start Trojan server: %v\n", err)
-		return nil
+		return nil, err
 	}
 
 	// Get SOCKS5 proxy URL

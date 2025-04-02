@@ -47,7 +47,10 @@ func New(proxyURL string, options ...Option) (*http.Client, error) {
 		return nil, ErrUnknownProxy
 	}
 
-	c.Transport = f(u, opt)
+	c.Transport, err = f(u, opt)
+	if err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }

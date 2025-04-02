@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-type ProxyFunc func(*url.URL, *Options) http.RoundTripper
+type ProxyFunc func(*url.URL, *Options) (http.RoundTripper, error)
 
 var (
 	supportProxies = make(map[string]ProxyFunc)

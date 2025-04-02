@@ -10,9 +10,9 @@ func init() {
 	supportProxies["https"] = ProxyHTTP
 }
 
-func ProxyHTTP(u *url.URL, o *Options) http.RoundTripper {
+func ProxyHTTP(u *url.URL, o *Options) (http.RoundTripper, error) {
 	tr := CreateTransport(o)
 	tr.Proxy = http.ProxyURL(u)
 
-	return tr
+	return tr, nil
 }

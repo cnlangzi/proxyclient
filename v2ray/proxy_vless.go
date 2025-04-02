@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/cnlangzi/proxyclient"
 )
@@ -14,12 +13,11 @@ func init() {
 }
 
 // ProxyVless creates a RoundTripper for VLESS proxy
-func ProxyVless(u *url.URL, o *proxyclient.Options) http.RoundTripper {
+func ProxyVless(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Launch VLESS instance and get the SOCKS port
 	_, port, err := StartVless(u.String(), 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to start VLESS server: %v\n", err)
-		return nil
+		return nil, err
 	}
 
 	// Create a SOCKS5 proxy URL from the local port

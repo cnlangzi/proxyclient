@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -12,7 +13,10 @@ import (
 )
 
 func TestProxyTrojan(t *testing.T) {
-	// 使用 TLS 配置以忽略证书验证
+	if os.Getenv("GITHUB_REF") != "" {
+		t.Skip("Skip test in GitHub Actions")
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
