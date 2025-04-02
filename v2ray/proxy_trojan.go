@@ -14,7 +14,6 @@ func init() {
 
 // ProxyTrojan creates a RoundTripper for Trojan proxy
 func ProxyTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-
 	// Start Trojan instance
 	_, port, err := StartTrojan(u.String(), 0)
 	if err != nil {

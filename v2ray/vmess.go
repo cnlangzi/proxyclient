@@ -236,6 +236,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 		ss.Security = "tls"
 		ss.TLSSettings = &tlscfg.TLSConfig{
 			ServerName: vmess.SNI,
+			Insecure:   true,
 		}
 		if vmess.Alpn != "" {
 			ss.TLSSettings.ALPN = cfgcommon.NewStringList([]string{vmess.Alpn})

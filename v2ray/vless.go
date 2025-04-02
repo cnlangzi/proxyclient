@@ -314,6 +314,7 @@ func buildVlessStreamSettings(vless *VlessConfig) *StreamSettings {
 		ss.Security = "tls"
 		ss.TLSSettings = &tlscfg.TLSConfig{
 			ServerName: vless.SNI,
+			Insecure:   true,
 		}
 		// If ALPN is needed, add it here
 	}
