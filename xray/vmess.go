@@ -14,53 +14,27 @@ import (
 
 // VmessConfig stores VMess URL parameters
 type VmessConfig struct {
-	V             string    `json:"v"`
-	PS            string    `json:"ps"`               // Remarks
-	Add           string    `json:"add"`              // Address
-	Port          IntString `json:"port"`             // Port
-	ID            string    `json:"id"`               // UUID
-	Aid           IntString `json:"aid"`              // AlterID
-	Net           string    `json:"net"`              // Transport protocol
-	Type          string    `json:"type"`             // Camouflage type
-	Host          string    `json:"host"`             // Camouflage domain
-	Path          string    `json:"path"`             // WebSocket path
-	TLS           string    `json:"tls"`              // TLS
-	SNI           string    `json:"sni"`              // TLS SNI
-	Alpn          string    `json:"alpn"`             // ALPN
-	Flow          string    `json:"flow"`             // XTLS Flow
-	Fp            string    `json:"fp"`               // Fingerprint
-	PbK           string    `json:"pbk"`              // PublicKey (Reality)
-	Sid           string    `json:"sid"`              // ShortID (Reality)
-	SpX           string    `json:"spx"`              // SpiderX (Reality)
-	Security      string    `json:"security"`         // Encryption method
-	XHTTPVer      string    `json:"xver"`             // XHTTP version, "h2" or "h3"
-	AllowInsecure bool      `json:"skip_cert_verify"` // Controls whether to allow insecure TLS connections
-}
-
-// IntString handles integer or string type
-type IntString struct {
-	value string
-}
-
-func (i *IntString) UnmarshalJSON(b []byte) error {
-	i.value = string(b)
-	return nil
-}
-
-func (i IntString) Value() int {
-	if i.value == "" {
-		return 0
-	}
-
-	// Try to remove quotes
-	value := strings.Trim(i.value, "\"")
-
-	var v int
-	_, err := fmt.Sscanf(value, "%d", &v)
-	if err != nil {
-		return 0
-	}
-	return v
+	V             string              `json:"v"`
+	PS            string              `json:"ps"`               // Remarks
+	Add           string              `json:"add"`              // Address
+	Port          proxyclient.JsonInt `json:"port"`             // Port
+	ID            string              `json:"id"`               // UUID
+	Aid           proxyclient.JsonInt `json:"aid"`              // AlterID
+	Net           string              `json:"net"`              // Transport protocol
+	Type          string              `json:"type"`             // Camouflage type
+	Host          string              `json:"host"`             // Camouflage domain
+	Path          string              `json:"path"`             // WebSocket path
+	TLS           string              `json:"tls"`              // TLS
+	SNI           string              `json:"sni"`              // TLS SNI
+	Alpn          string              `json:"alpn"`             // ALPN
+	Flow          string              `json:"flow"`             // XTLS Flow
+	Fp            string              `json:"fp"`               // Fingerprint
+	PbK           string              `json:"pbk"`              // PublicKey (Reality)
+	Sid           string              `json:"sid"`              // ShortID (Reality)
+	SpX           string              `json:"spx"`              // SpiderX (Reality)
+	Security      string              `json:"security"`         // Encryption method
+	XHTTPVer      string              `json:"xver"`             // XHTTP version, "h2" or "h3"
+	AllowInsecure bool                `json:"skip_cert_verify"` // Controls whether to allow insecure TLS connections
 }
 
 // VmessToXRay converts VMess URL to Xray JSON configuration
