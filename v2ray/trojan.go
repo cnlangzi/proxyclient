@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -15,15 +16,16 @@ import (
 
 // TrojanConfig stores parsed Trojan URL parameters
 type TrojanConfig struct {
-	Password string // Authentication password
-	Address  string // Server address
-	Port     int    // Server port
-	SNI      string // TLS SNI value
-	Type     string // Transport type (tcp, ws, etc.)
-	Path     string // WebSocket path
-	Host     string // Host header value
-	Flow     string // Flow control settings
-	Remark   string // Remark information
+	Password      string // Authentication password
+	Address       string // Server address
+	Port          int    // Server port
+	SNI           string // TLS SNI value
+	Type          string // Transport type (tcp, ws, etc.)
+	Path          string // WebSocket path
+	Host          string // Host header value
+	Flow          string // Flow control settings
+	Remark        string // Remark information
+	AllowInsecure bool   // Whether to allow insecure TLS connections
 }
 
 // TrojanOutboundSetting represents Trojan outbound configuration
@@ -105,16 +107,25 @@ func parseTrojanURL(trojanURL string) (*TrojanConfig, error) {
 	// Parse query parameters
 	params := u.Query()
 
+	// Parse allowInsecure (default to false for security)
+	allowInsecure := false
+	if insecureStr := params.Get("allowInsecure"); insecureStr != "" {
+		if insecureStr == "1" || strings.ToLower(insecureStr) == "true" {
+			allowInsecure = true
+		}
+	}
+
 	trojan := &TrojanConfig{
-		Password: password,
-		Address:  host,
-		Port:     port,
-		SNI:      params.Get("sni"),  // TLS SNI
-		Type:     params.Get("type"), // Transport type
-		Path:     params.Get("path"), // WebSocket path
-		Host:     params.Get("host"), // WebSocket Host
-		Flow:     params.Get("flow"), // Flow control
-		Remark:   u.Fragment,         // Remark
+		Password:      password,
+		Address:       host,
+		Port:          port,
+		SNI:           params.Get("sni"),  // TLS SNI
+		Type:          params.Get("type"), // Transport type
+		Path:          params.Get("path"), // WebSocket path
+		Host:          params.Get("host"), // WebSocket Host
+		Flow:          params.Get("flow"), // Flow control
+		Remark:        u.Fragment,         // Remark
+		AllowInsecure: allowInsecure,      // Allow insecure connections
 	}
 
 	// Set default SNI (if not provided)
@@ -178,7 +189,7 @@ func createCompleteTrojanConfig(trojan *TrojanConfig, port int) *V2RayConfig {
 				StreamSettings: buildTrojanStreamSettings(trojan),
 				Mux: &Mux{
 					Enabled:     false,
-					Concurrency: 8,
+					Concurrency: runtime.NumCPU(),
 					Protocol:    "auto",
 				},
 			},
@@ -252,8 +263,8 @@ func buildTrojanStreamSettings(trojan *TrojanConfig) *StreamSettings {
 	// Configure TLS settings
 	ss.TLSSettings = &tlscfg.TLSConfig{
 		ServerName:        trojan.SNI,
-		Insecure:          true,  // Allow insecure connections
-		DisableSystemRoot: false, // Use system root certificates
+		Insecure:          trojan.AllowInsecure, // Use the value from the URL parameter
+		DisableSystemRoot: false,                // Use system root certificates
 		// ALPN:              cfgcommon.NewStringList([]string{"h2", "http/1.1"}),
 	}
 

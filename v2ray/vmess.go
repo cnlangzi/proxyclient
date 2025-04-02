@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/cnlangzi/proxyclient"
@@ -158,7 +159,7 @@ func createCompleteConfig(vmess *VmessConfig, port int) *V2RayConfig {
 				StreamSettings: buildEnhancedStreamSettings(vmess),
 				Mux: &Mux{
 					Enabled:     true,
-					Concurrency: 8,
+					Concurrency: runtime.NumCPU(),
 					Protocol:    "auto",
 				},
 			},

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -191,7 +192,7 @@ func createCompleteVlessConfig(vless *VlessConfig, port int) *V2RayConfig {
 				StreamSettings: buildVlessStreamSettings(vless),
 				Mux: &Mux{
 					Enabled:     true,
-					Concurrency: 8,
+					Concurrency: runtime.NumCPU(),
 					Protocol:    "auto",
 				},
 			},
