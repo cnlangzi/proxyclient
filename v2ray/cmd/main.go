@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	flag.StringVar(&proxy, "proxy", "", "vmess/vless url")
+	flag.StringVar(&proxy, "proxy", "", "vmess/vless/trojan url")
 	flag.IntVar(&port, "port", 10800, "socks5 port")
 	flag.Parse()
 
@@ -40,6 +40,13 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("VLESS proxy started on socks5://127.0.0.1:%d\n", actualPort)
+	} else if strings.HasPrefix(proxy, "trojan://") {
+		inst, actualPort, err = v2ray.StartTrojan(proxy, port)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to start Trojan proxy: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Trojan proxy started on socks5://127.0.0.1:%d\n", actualPort)
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: Unknown proxy type. URL must start with vmess:// or vless://\n")
 		os.Exit(1)

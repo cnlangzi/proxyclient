@@ -67,15 +67,16 @@ func main() {
 ### **Supported Proxy Types**  
 | Protocol  | Example Config                                            |  
 |-----------|-----------------------------------------------------------| 
-| HTTP      | `http://user:pass@127.0.0.1:8080`                         |  
-| HTTPs     | `https://user:pass@127.0.0.1:8080`                        |  
-| SOCKS4    | `socks4://user:pass@127.0.0.1:1080`                       |  
-| SOCKS5    | `socks5://user:pass@127.0.0.1:1080`                       | 
-| ssh       | `ssh://user:pass@127.0.0.1:2222`                          |   
+| http      | `http://user:pass@127.0.0.1:8080`                         |  
+| https     | `https://user:pass@127.0.0.1:8080`                        |  
+| socks4    | `socks4://user:pass@127.0.0.1:1080`                       |  
+| socks5    | `socks5://user:pass@127.0.0.1:1080`                       |
+| trojan    | `trojan://pass@host:40021?allowInsecure=0&sni=&type=ws`   |  
 | vmess(v5) | `vmess://eyJ2IjogIjIiLCAicHMiOiAiXHU1Yz...`               |  
 | vless(v5) | `vless://8a...ae2@104.26.14.85:8080?allowInsecure=0&sni=` |
 | SS        | `ss://user:pass@127.0.0.1:8080`                           |  
-| SSR       | `ssr://user:pass@127.0.0.1:8080`                          |  
+| SSR       | `ssr://user:pass@127.0.0.1:8080`                          | 
+| ssh       | `ssh://user:pass@127.0.0.1:2222`                          |   
 | MTProto   | `mtproto://user:pass@127.0.0.1:8080`                      |  
 
 ---
