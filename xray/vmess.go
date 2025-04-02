@@ -14,26 +14,27 @@ import (
 
 // VmessConfig stores VMess URL parameters
 type VmessConfig struct {
-	V        string    `json:"v"`
-	PS       string    `json:"ps"`       // Remarks
-	Add      string    `json:"add"`      // Address
-	Port     IntString `json:"port"`     // Port
-	ID       string    `json:"id"`       // UUID
-	Aid      IntString `json:"aid"`      // AlterID
-	Net      string    `json:"net"`      // Transport protocol
-	Type     string    `json:"type"`     // Camouflage type
-	Host     string    `json:"host"`     // Camouflage domain
-	Path     string    `json:"path"`     // WebSocket path
-	TLS      string    `json:"tls"`      // TLS
-	SNI      string    `json:"sni"`      // TLS SNI
-	Alpn     string    `json:"alpn"`     // ALPN
-	Flow     string    `json:"flow"`     // XTLS Flow
-	Fp       string    `json:"fp"`       // Fingerprint
-	PbK      string    `json:"pbk"`      // PublicKey (Reality)
-	Sid      string    `json:"sid"`      // ShortID (Reality)
-	SpX      string    `json:"spx"`      // SpiderX (Reality)
-	Security string    `json:"security"` // Encryption method
-	XHTTPVer string    `json:"xver"`     // XHTTP version, "h2" or "h3"
+	V             string    `json:"v"`
+	PS            string    `json:"ps"`               // Remarks
+	Add           string    `json:"add"`              // Address
+	Port          IntString `json:"port"`             // Port
+	ID            string    `json:"id"`               // UUID
+	Aid           IntString `json:"aid"`              // AlterID
+	Net           string    `json:"net"`              // Transport protocol
+	Type          string    `json:"type"`             // Camouflage type
+	Host          string    `json:"host"`             // Camouflage domain
+	Path          string    `json:"path"`             // WebSocket path
+	TLS           string    `json:"tls"`              // TLS
+	SNI           string    `json:"sni"`              // TLS SNI
+	Alpn          string    `json:"alpn"`             // ALPN
+	Flow          string    `json:"flow"`             // XTLS Flow
+	Fp            string    `json:"fp"`               // Fingerprint
+	PbK           string    `json:"pbk"`              // PublicKey (Reality)
+	Sid           string    `json:"sid"`              // ShortID (Reality)
+	SpX           string    `json:"spx"`              // SpiderX (Reality)
+	Security      string    `json:"security"`         // Encryption method
+	XHTTPVer      string    `json:"xver"`             // XHTTP version, "h2" or "h3"
+	AllowInsecure bool      `json:"skip_cert_verify"` // Controls whether to allow insecure TLS connections
 }
 
 // IntString handles integer or string type
@@ -74,8 +75,11 @@ func VmessToXRay(vmessURL string, port int) ([]byte, int, error) {
 	}
 
 	// Parse to VMessConfig
-	var vmess VmessConfig
-	if err := json.Unmarshal(decoded, &vmess); err != nil {
+	vmess := &VmessConfig{
+		AllowInsecure: true,
+	}
+
+	if err := json.Unmarshal(decoded, vmess); err != nil {
 		return nil, 0, fmt.Errorf("JSON parsing failed: %w", err)
 	}
 
@@ -90,7 +94,7 @@ func VmessToXRay(vmessURL string, port int) ([]byte, int, error) {
 	}
 
 	// Generate complete Xray configuration
-	config := createCompleteVmessConfig(&vmess, port)
+	config := createCompleteVmessConfig(vmess, port)
 
 	// Return JSON format
 	buf, err := json.MarshalIndent(config, "", "  ")
@@ -196,7 +200,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	if vmess.TLS == "tls" {
 		ss.TLSSettings = &TLSSettings{
 			ServerName:    vmess.Host,
-			AllowInsecure: true,
+			AllowInsecure: vmess.AllowInsecure, // Use the value read from configuration
 		}
 
 		if vmess.SNI != "" {
@@ -217,7 +221,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 		ss.Security = "xtls"
 		ss.XTLSSettings = &TLSSettings{
 			ServerName:    vmess.Host,
-			AllowInsecure: true,
+			AllowInsecure: vmess.AllowInsecure, // Use the value read from configuration
 		}
 
 		if vmess.SNI != "" {

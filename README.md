@@ -73,9 +73,9 @@ func main() {
 | socks5    | `socks5://user:pass@127.0.0.1:1080`                       |
 | trojan    | `trojan://pass@host:40021?allowInsecure=0&sni=&type=ws`   |  
 | vmess(v5) | `vmess://eyJ2IjogIjIiLCAicHMiOiAiXHU1Yz...`               |  
-| vless(v5) | `vless://8a...ae2@104.26.14.85:8080?allowInsecure=0&sni=` |
-| SS        | `ss://user:pass@127.0.0.1:8080`                           |  
-| SSR       | `ssr://user:pass@127.0.0.1:8080`                          | 
+| vless(v5) | `vless://uuid@host:port?allowInsecure=false&security=tls...`|
+| ss        | `ss://user:pass@127.0.0.1:8080`                           |  
+| ssr       | `ssr://user:pass@127.0.0.1:8080`                          | 
 | ssh       | `ssh://user:pass@127.0.0.1:2222`                          |   
 | MTProto   | `mtproto://user:pass@127.0.0.1:8080`                      |  
 

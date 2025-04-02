@@ -9,7 +9,6 @@ import (
 
 	"github.com/cnlangzi/proxyclient"
 	core "github.com/xtls/xray-core/core"
-	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
 // SSRConfig stores ShadowsocksR URL parameters

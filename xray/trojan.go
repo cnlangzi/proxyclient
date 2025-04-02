@@ -62,11 +62,12 @@ func ParseTrojan(trojanURL string) (*TrojanConfig, error) {
 
 	// Create configuration
 	config := &TrojanConfig{
-		Password: password,
-		Address:  host,
-		Port:     port,
-		Security: "tls", // Trojan defaults to TLS
-		Type:     "tcp", // Default transport type
+		Password:      password,
+		Address:       host,
+		Port:          port,
+		Security:      "tls", // Trojan defaults to TLS
+		Type:          "tcp", // Default transport type
+		AllowInsecure: true,
 	}
 
 	// Parse query parameters
@@ -113,10 +114,9 @@ func ParseTrojan(trojanURL string) (*TrojanConfig, error) {
 	}
 
 	if v := query.Get("allowInsecure"); v != "" {
-		config.AllowInsecure = strings.ToLower(v) == "true" || v == "1"
-	} else {
-		// Default to true, allows insecure connections
-		config.AllowInsecure = true
+		if strings.ToLower(v) == "false" || v == "0" {
+			config.AllowInsecure = false
+		}
 	}
 
 	return config, nil

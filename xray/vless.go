@@ -16,22 +16,23 @@ import (
 
 // VlessConfig stores VLESS URL parameters
 type VlessConfig struct {
-	UUID        string
-	Address     string
-	Port        int
-	Encryption  string
-	Flow        string
-	Type        string
-	Security    string
-	Path        string
-	Host        string
-	SNI         string
-	ALPN        string
-	Fingerprint string
-	PublicKey   string
-	ShortID     string
-	SpiderX     string
-	ServiceName string
+	UUID          string
+	Address       string
+	Port          int
+	Encryption    string
+	Flow          string
+	Type          string
+	Security      string
+	Path          string
+	Host          string
+	SNI           string
+	ALPN          string
+	Fingerprint   string
+	PublicKey     string
+	ShortID       string
+	SpiderX       string
+	ServiceName   string
+	AllowInsecure bool // Controls whether to allow insecure TLS connections
 }
 
 // ParseVless parses VLESS URL
@@ -65,11 +66,12 @@ func ParseVless(vlessURL string) (*VlessConfig, error) {
 
 	// Create configuration
 	config := &VlessConfig{
-		UUID:       uuid,
-		Address:    host,
-		Port:       port,
-		Encryption: "none", // VLESS default encryption is none
-		Type:       "tcp",  // Default transport type
+		UUID:          uuid,
+		Address:       host,
+		Port:          port,
+		Encryption:    "none", // VLESS default encryption is none
+		Type:          "tcp",  // Default transport type
+		AllowInsecure: true,
 	}
 
 	// Parse query parameters
@@ -130,6 +132,12 @@ func ParseVless(vlessURL string) (*VlessConfig, error) {
 		config.ServiceName = v
 	}
 
+	if v := query.Get("allowInsecure"); v != "" {
+		if strings.ToLower(v) == "false" || v == "0" {
+			config.AllowInsecure = false
+		}
+	}
+
 	return config, nil
 }
 
@@ -173,11 +181,11 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		Security: vless.Security,
 	}
 
-	// Configure TLS
+	// Configure TLS - update this section
 	if vless.Security == "tls" {
 		streamSettings.TLSSettings = &TLSSettings{
 			ServerName:    vless.SNI,
-			AllowInsecure: true,
+			AllowInsecure: vless.AllowInsecure, // Use the value read from configuration
 		}
 
 		if vless.Fingerprint != "" {
@@ -189,12 +197,12 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// Configure XTLS
+	// Configure XTLS - update this section
 	if vless.Security == "xtls" {
 		streamSettings.Security = "xtls"
 		streamSettings.XTLSSettings = &TLSSettings{
 			ServerName:    vless.SNI,
-			AllowInsecure: true,
+			AllowInsecure: vless.AllowInsecure, // Use the value read from configuration
 		}
 
 		if vless.Fingerprint != "" {
