@@ -16,11 +16,11 @@ import (
 	shadowsocks "github.com/sagernet/sing-shadowsocks"
 	"github.com/sagernet/sing-shadowsocks/shadowaead"
 	"github.com/sagernet/sing-shadowsocks/shadowaead_2022"
-	M "github.com/sagernet/sing/common/metadata"
+	md "github.com/sagernet/sing/common/metadata"
 )
 
-// SSConfig holds Shadowsocks URL parameters
-type SSConfig struct {
+// Config holds Shadowsocks URL parameters
+type Config struct {
 	Server     string
 	Port       int
 	Method     string
@@ -32,11 +32,11 @@ type SSConfig struct {
 
 var (
 	mu      sync.Mutex
-	proxies = make(map[string]*SSServer)
+	proxies = make(map[string]*Server)
 )
 
-// SSServer represents a running Shadowsocks server
-type SSServer struct {
+// Server represents a running Shadowsocks server
+type Server struct {
 	Method     string
 	Password   string
 	ServerAddr string
@@ -46,7 +46,7 @@ type SSServer struct {
 }
 
 // ParseSS parses a Shadowsocks URL
-func ParseSS(ssURL string) (*SSConfig, error) {
+func ParseSS(ssURL string) (*Config, error) {
 	// Remove the ss:// prefix
 	encodedPart := strings.TrimPrefix(ssURL, "ss://")
 
@@ -141,7 +141,7 @@ func ParseSS(ssURL string) (*SSConfig, error) {
 		return nil, fmt.Errorf("invalid port: %w", err)
 	}
 
-	return &SSConfig{
+	return &Config{
 		Server:     server,
 		Port:       portInt,
 		Method:     method,
@@ -153,7 +153,7 @@ func ParseSS(ssURL string) (*SSConfig, error) {
 }
 
 // getServer looks up a running Shadowsocks server
-func getServer(proxyURL string) *SSServer {
+func getServer(proxyURL string) *Server {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -164,15 +164,15 @@ func getServer(proxyURL string) *SSServer {
 }
 
 // setServer registers a running Shadowsocks server
-func setServer(proxyURL string, server *SSServer) {
+func setServer(proxyURL string, server *Server) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	proxies[proxyURL] = server
 }
 
-// createShadowsocksMethod creates the appropriate Shadowsocks method based on the cipher type
-func createShadowsocksMethod(method, password string) (shadowsocks.Method, error) {
+// createMethod creates the appropriate Shadowsocks method based on the cipher type
+func createMethod(method, password string) (shadowsocks.Method, error) {
 	lowerMethod := strings.ToLower(method)
 
 	if strings.HasPrefix(lowerMethod, "2022-") {
@@ -186,25 +186,12 @@ func createShadowsocksMethod(method, password string) (shadowsocks.Method, error
 	}
 }
 
-// handleShadowsocksConnection handles a single client connection to the SOCKS server
-func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr string) {
+// handleConn handles a single client connection to the SOCKS server
+func handleConn(conn net.Conn, method, password, serverAddr string) {
 	defer conn.Close()
 
 	// Set a read deadline to prevent hanging
-	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
-
-	// Check if this is likely a verification connection
-	remoteAddr := conn.RemoteAddr().String()
-	isLocalConnection := strings.HasPrefix(remoteAddr, "127.0.0.1:") ||
-		strings.HasPrefix(remoteAddr, "[::1]:")
-
-	// Read the first few bytes with a very short timeout for verification connections
-	if isLocalConnection {
-		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-	}
-
-	// Add more detailed logging for the SOCKS handshake
-	fmt.Printf("New connection from %s, starting SOCKS handshake\n", remoteAddr)
+	conn.SetReadDeadline(time.Now().Add(30 * time.Second)) // nolint:errcheck
 
 	// Custom SOCKS5 handshake implementation with more error details
 	// 1. Read the SOCKS version and number of methods
@@ -212,7 +199,7 @@ func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr str
 	n, err := conn.Read(buf)
 	if err != nil {
 		// Only log EOF errors for non-verification connections
-		if err != io.EOF || !isLocalConnection {
+		if err != io.EOF {
 			fmt.Printf("Failed to read SOCKS initial handshake: %v\n", err)
 		}
 		return
@@ -236,7 +223,7 @@ func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr str
 	}
 
 	// 3. Read the SOCKS request
-	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(30 * time.Second)) // nolint:errcheck
 	n, err = conn.Read(buf)
 	if err != nil {
 		fmt.Printf("Failed to read SOCKS request: %v\n", err)
@@ -292,7 +279,7 @@ func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr str
 	}
 
 	// Reset read deadline
-	conn.SetReadDeadline(time.Time{})
+	conn.SetReadDeadline(time.Time{}) // nolint:errcheck
 
 	// Parse destination address from tgt
 	var destHost string
@@ -322,14 +309,14 @@ func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr str
 	defer rc.Close()
 
 	// Create the Shadowsocks method
-	ssMethod, err := createShadowsocksMethod(method, password)
+	ssMethod, err := createMethod(method, password)
 	if err != nil {
 		fmt.Printf("Failed to create cipher: %v\n", err)
 		return
 	}
 
 	// Create destination address
-	destination := M.ParseSocksaddr(fmt.Sprintf("%s:%d", destHost, destPort))
+	destination := md.ParseSocksaddr(fmt.Sprintf("%s:%d", destHost, destPort))
 
 	// Create a connection to the server
 	ssConn, err := ssMethod.DialConn(rc, destination)
@@ -364,8 +351,8 @@ func handleShadowsocksConnection(conn net.Conn, method, password, serverAddr str
 	fmt.Printf("Connection to %s:%d closed\n", destHost, destPort)
 }
 
-// startShadowsocksServer starts a SOCKS server that forwards to a Shadowsocks server
-func startShadowsocksServer(port int, method, password, serverAddr string) (net.Listener, context.CancelFunc, error) {
+// startServer starts a SOCKS server that forwards to a Shadowsocks server
+func startServer(port int, method, password, serverAddr string) (net.Listener, context.CancelFunc, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to listen on %d: %w", port, err)
@@ -389,7 +376,7 @@ func startShadowsocksServer(port int, method, password, serverAddr string) (net.
 						continue
 					}
 				}
-				go handleShadowsocksConnection(conn, method, password, serverAddr)
+				go handleConn(conn, method, password, serverAddr)
 			}
 		}
 	}()
@@ -427,7 +414,7 @@ func StartSS(ssURL string, port int) (int, error) {
 	serverAddr := fmt.Sprintf("%s:%d", ss.Server, ss.Port)
 
 	// Start a SOCKS server that forwards to the Shadowsocks server
-	listener, cancel, err := startShadowsocksServer(port, ss.Method, ss.Password, serverAddr)
+	listener, cancel, err := startServer(port, ss.Method, ss.Password, serverAddr)
 	if err != nil {
 		return 0, err
 	}
@@ -436,7 +423,7 @@ func StartSS(ssURL string, port int) (int, error) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Store the running server
-	setServer(ssURL, &SSServer{
+	setServer(ssURL, &Server{
 		Method:     ss.Method,
 		Password:   ss.Password,
 		ServerAddr: serverAddr,
