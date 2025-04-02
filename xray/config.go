@@ -1,6 +1,6 @@
 package xray
 
-// 通用配置结构体，与 Xray 配置格式匹配
+// General configuration structure, matching the Xray configuration format
 type XRayConfig struct {
 	Log       *LogConfig     `json:"log,omitempty"`
 	DNS       *DNSConfig     `json:"dns,omitempty"`
@@ -70,9 +70,9 @@ type StreamSettings struct {
 	HTTPSettings    *HTTPSettings    `json:"httpSettings,omitempty"`
 	QUICSettings    *QUICSettings    `json:"quicSettings,omitempty"`
 	GRPCSettings    *GRPCSettings    `json:"grpcSettings,omitempty"`
-	XTLSSettings    *TLSSettings     `json:"xtlsSettings,omitempty"`    // 新增 XTLS 支持
-	RealitySettings *RealitySettings `json:"realitySettings,omitempty"` // 新增 Reality 支持
-	XHTTPSettings   *XHTTPSettings   `json:"xhttpSettings,omitempty"`   // 新增 XHTTP 支持
+	XTLSSettings    *TLSSettings     `json:"xtlsSettings,omitempty"`    // Added XTLS support
+	RealitySettings *RealitySettings `json:"realitySettings,omitempty"` // Added Reality support
+	XHTTPSettings   *XHTTPSettings   `json:"xhttpSettings,omitempty"`   // Added XHTTP support
 }
 
 type RealitySettings struct {
@@ -112,10 +112,10 @@ type KCPSettings struct {
 	Header           *Header `json:"header,omitempty"`
 }
 
-// 更新 WSSettings 结构体
+// Updated WSSettings structure
 type WSSettings struct {
 	Path    string            `json:"path,omitempty"`
-	Host    string            `json:"host,omitempty"` // 新增独立的 Host 字段
+	Host    string            `json:"host,omitempty"` // Added independent Host field
 	Headers map[string]string `json:"headers,omitempty"`
 }
 
@@ -141,11 +141,11 @@ type Mux struct {
 	Protocol    string `json:"protocol,omitempty"`
 }
 
-// 添加新的 XHTTP 设置结构体
+// Added new XHTTP settings structure
 type XHTTPSettings struct {
 	Host    string            `json:"host,omitempty"`
 	Path    string            `json:"path,omitempty"`
 	Method  string            `json:"method,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
-	Version string            `json:"version,omitempty"` // "h2" 或 "h3"
+	Version string            `json:"version,omitempty"` // "h2" or "h3"
 }

@@ -14,41 +14,42 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
-// TrojanConfig 存储 Trojan URL 参数
+// TrojanConfig stores Trojan URL parameters
 type TrojanConfig struct {
-	Password    string
-	Address     string
-	Port        int
-	Flow        string
-	Type        string
-	Security    string
-	Path        string
-	Host        string
-	SNI         string
-	ALPN        string
-	Fingerprint string
-	ServiceName string
+	Password      string
+	Address       string
+	Port          int
+	Flow          string
+	Type          string
+	Security      string
+	Path          string
+	Host          string
+	SNI           string
+	ALPN          string
+	Fingerprint   string
+	ServiceName   string
+	AllowInsecure bool // Controls whether to allow insecure TLS connections
 }
 
-// ParseTrojan 解析 Trojan URL
+// ParseTrojan parses Trojan URL
 // trojan://password@host:port?security=tls&type=tcp&sni=example.com...
 func ParseTrojan(trojanURL string) (*TrojanConfig, error) {
-	// 移除 trojan:// 前缀
+	// Remove trojan:// prefix
 	trojanURL = strings.TrimPrefix(trojanURL, "trojan://")
 
-	// 解析为标准 URL
+	// Parse as standard URL
 	u, err := url.Parse("trojan://" + trojanURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid Trojan URL: %w", err)
 	}
 
-	// 提取用户信息
+	// Extract user information
 	if u.User == nil {
 		return nil, fmt.Errorf("missing password in Trojan URL")
 	}
 	password := u.User.Username()
 
-	// 提取主机和端口
+	// Extract host and port
 	host, portStr, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid host:port in Trojan URL: %w", err)
@@ -59,16 +60,16 @@ func ParseTrojan(trojanURL string) (*TrojanConfig, error) {
 		return nil, fmt.Errorf("invalid port in Trojan URL: %w", err)
 	}
 
-	// 创建配置
+	// Create configuration
 	config := &TrojanConfig{
 		Password: password,
 		Address:  host,
 		Port:     port,
-		Security: "tls", // Trojan 默认使用 TLS
-		Type:     "tcp", // 默认传输类型
+		Security: "tls", // Trojan defaults to TLS
+		Type:     "tcp", // Default transport type
 	}
 
-	// 解析查询参数
+	// Parse query parameters
 	query := u.Query()
 
 	if v := query.Get("flow"); v != "" {
@@ -111,18 +112,25 @@ func ParseTrojan(trojanURL string) (*TrojanConfig, error) {
 		config.ServiceName = v
 	}
 
+	if v := query.Get("allowInsecure"); v != "" {
+		config.AllowInsecure = strings.ToLower(v) == "true" || v == "1"
+	} else {
+		// Default to true, allows insecure connections
+		config.AllowInsecure = true
+	}
+
 	return config, nil
 }
 
-// TrojanToXRay 将 Trojan URL 转换为 Xray JSON 配置
+// TrojanToXRay converts Trojan URL to Xray JSON configuration
 func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
-	// 解析 Trojan URL
+	// Parse Trojan URL
 	trojan, err := ParseTrojan(trojanURL)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 获取空闲端口（如果未提供）
+	// Get a free port if none provided
 	if port < 1 {
 		port, err = proxyclient.GetFreePort()
 		if err != nil {
@@ -130,7 +138,7 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 创建 Trojan 出站配置
+	// Create Trojan outbound configuration
 	trojanSettings := map[string]interface{}{
 		"servers": []map[string]interface{}{
 			{
@@ -143,17 +151,17 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 		},
 	}
 
-	// 创建流设置
+	// Create stream settings
 	streamSettings := &StreamSettings{
 		Network:  trojan.Type,
 		Security: trojan.Security,
 	}
 
-	// 配置 TLS
+	// Configure TLS
 	if trojan.Security == "tls" {
 		streamSettings.TLSSettings = &TLSSettings{
 			ServerName:    trojan.SNI,
-			AllowInsecure: true,
+			AllowInsecure: trojan.AllowInsecure, // Use the value read from configuration
 		}
 
 		if trojan.Fingerprint != "" {
@@ -163,16 +171,39 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 		if trojan.ALPN != "" {
 			streamSettings.TLSSettings.ALPN = strings.Split(trojan.ALPN, ",")
 		}
+	} else if trojan.Security == "xtls" {
+		// Handle XTLS case
+		streamSettings.Security = "xtls"
+		streamSettings.XTLSSettings = &TLSSettings{
+			ServerName:    trojan.SNI,
+			AllowInsecure: trojan.AllowInsecure, // Use the value read from configuration
+		}
+
+		if trojan.Fingerprint != "" {
+			streamSettings.XTLSSettings.Fingerprint = trojan.Fingerprint
+		}
+
+		if trojan.ALPN != "" {
+			streamSettings.XTLSSettings.ALPN = strings.Split(trojan.ALPN, ",")
+		}
+	} else if trojan.Security == "reality" {
+		// Handle Reality case
+		streamSettings.Security = "reality"
+		streamSettings.RealitySettings = &RealitySettings{
+			ServerName:  trojan.SNI,
+			Fingerprint: trojan.Fingerprint,
+			// Reality doesn't need AllowInsecure setting
+		}
 	}
 
-	// 根据传输类型配置
+	// Configure based on transport type
 	switch trojan.Type {
 	case "ws":
 		streamSettings.WSSettings = &WSSettings{
 			Path: trojan.Path,
 			Host: trojan.Host,
 		}
-	case "xhttp": // 明确指定使用 XHTTP
+	case "xhttp": // Explicitly specify to use XHTTP
 		streamSettings.Network = "xhttp"
 		streamSettings.XHTTPSettings = &XHTTPSettings{
 			Host:    trojan.Host,
@@ -181,7 +212,7 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 			Version: "h2",
 		}
 
-		// 根据 ALPN 设置选择 HTTP 版本
+		// Select HTTP version based on ALPN settings
 		if trojan.ALPN != "" {
 			if strings.Contains(trojan.ALPN, "h3") {
 				streamSettings.XHTTPSettings.Version = "h3"
@@ -215,7 +246,7 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 创建完整配置
+	// Create complete configuration
 	config := &XRayConfig{
 		Log: &LogConfig{
 			Loglevel: "warning",
@@ -264,7 +295,7 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 		// },
 	}
 
-	// 转换为 JSON
+	// Convert to JSON
 	buf, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to marshal config to JSON: %w", err)
@@ -273,29 +304,28 @@ func TrojanToXRay(trojanURL string, port int) ([]byte, int, error) {
 	return buf, port, nil
 }
 
-// StartTrojan 启动 Trojan 客户端并返回 Xray 实例和本地 SOCKS 端口
+// StartTrojan starts a Trojan client and returns Xray instance and local SOCKS port
 func StartTrojan(trojanURL string, port int) (*core.Instance, int, error) {
-	// 检查是否已经运行
+	// Check if already running
 	server := getServer(trojanURL)
 	if server != nil {
 		return server.Instance, server.SocksPort, nil
 	}
 
-	// 转换为 Xray JSON 配置
+	// Convert to Xray JSON configuration
 	jsonConfig, port, err := TrojanToXRay(trojanURL, port)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 启动 Xray 实例
+	// Start Xray instance
 	instance, err := core.StartInstance("json", jsonConfig)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to start Xray instance: %w", err)
 	}
 
-	// 注册运行的服务器
+	// Register the running server
 	setServer(trojanURL, instance, port)
 
-	fmt.Printf("Trojan proxy started on socks5://127.0.0.1:%d\n", port)
 	return instance, port, nil
 }

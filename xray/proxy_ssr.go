@@ -12,15 +12,15 @@ func init() {
 	proxyclient.RegisterProxy("ssr", ProxySSR)
 }
 
-// ProxySSR 创建 SSR 代理的 RoundTripper
+// ProxySSR creates a RoundTripper for SSR proxy
 func ProxySSR(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	// 通过 Xray 启动 SSR 客户端
+	// Start SSR client through Xray
 	_, port, err := StartSSR(u.String(), 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start SSR proxy: %w", err)
 	}
 
-	// 使用由 Xray 创建的 SOCKS5 代理
+	// Use SOCKS5 proxy created by Xray
 	proxyURL, _ := url.Parse(fmt.Sprintf("socks5://127.0.0.1:%d", port))
 	return proxyclient.ProxySocks5(proxyURL, o)
 }

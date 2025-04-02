@@ -12,31 +12,31 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
-// VmessConfig 存储 VMess URL 参数
+// VmessConfig stores VMess URL parameters
 type VmessConfig struct {
 	V        string    `json:"v"`
-	PS       string    `json:"ps"`       // 备注
-	Add      string    `json:"add"`      // 地址
-	Port     IntString `json:"port"`     // 端口
+	PS       string    `json:"ps"`       // Remarks
+	Add      string    `json:"add"`      // Address
+	Port     IntString `json:"port"`     // Port
 	ID       string    `json:"id"`       // UUID
 	Aid      IntString `json:"aid"`      // AlterID
-	Net      string    `json:"net"`      // 传输协议
-	Type     string    `json:"type"`     // 伪装类型
-	Host     string    `json:"host"`     // 伪装域名
-	Path     string    `json:"path"`     // WebSocket 路径
+	Net      string    `json:"net"`      // Transport protocol
+	Type     string    `json:"type"`     // Camouflage type
+	Host     string    `json:"host"`     // Camouflage domain
+	Path     string    `json:"path"`     // WebSocket path
 	TLS      string    `json:"tls"`      // TLS
 	SNI      string    `json:"sni"`      // TLS SNI
 	Alpn     string    `json:"alpn"`     // ALPN
 	Flow     string    `json:"flow"`     // XTLS Flow
-	Fp       string    `json:"fp"`       // 指纹
+	Fp       string    `json:"fp"`       // Fingerprint
 	PbK      string    `json:"pbk"`      // PublicKey (Reality)
 	Sid      string    `json:"sid"`      // ShortID (Reality)
 	SpX      string    `json:"spx"`      // SpiderX (Reality)
-	Security string    `json:"security"` // 加密方法
-	XHTTPVer string    `json:"xver"`     // XHTTP 版本，"h2" 或 "h3"
+	Security string    `json:"security"` // Encryption method
+	XHTTPVer string    `json:"xver"`     // XHTTP version, "h2" or "h3"
 }
 
-// IntString 处理整数或字符串类型
+// IntString handles integer or string type
 type IntString struct {
 	value string
 }
@@ -51,7 +51,7 @@ func (i IntString) Value() int {
 		return 0
 	}
 
-	// 尝试移除引号
+	// Try to remove quotes
 	value := strings.Trim(i.value, "\"")
 
 	var v int
@@ -62,25 +62,25 @@ func (i IntString) Value() int {
 	return v
 }
 
-// VmessToXRay 将 VMess URL 转换为 Xray JSON 配置
+// VmessToXRay converts VMess URL to Xray JSON configuration
 func VmessToXRay(vmessURL string, port int) ([]byte, int, error) {
-	// 删除 vmess:// 前缀
+	// Remove vmess:// prefix
 	encoded := strings.TrimPrefix(vmessURL, "vmess://")
 
-	// Base64 解码
+	// Base64 decode
 	decoded, err := base64Decode(encoded)
 	if err != nil {
 		return nil, 0, fmt.Errorf("base64 decode failed: %w", err)
 	}
 
-	// 解析为 VMessConfig
+	// Parse to VMessConfig
 	var vmess VmessConfig
 	if err := json.Unmarshal(decoded, &vmess); err != nil {
 		return nil, 0, fmt.Errorf("JSON parsing failed: %w", err)
 	}
 
-	// 如果 vmess.Net 是 "xhttp"，我们应该正确处理
-	// 这通常应该在 base64 解码后的 JSON 处理部分
+	// If vmess.Net is "xhttp", we should handle it properly
+	// This should typically be in the JSON processing part after base64 decoding
 
 	if port < 1 {
 		port, err = proxyclient.GetFreePort()
@@ -89,16 +89,16 @@ func VmessToXRay(vmessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 生成完整的 Xray 配置
+	// Generate complete Xray configuration
 	config := createCompleteVmessConfig(&vmess, port)
 
-	// 返回 JSON 格式
+	// Return JSON format
 	buf, err := json.MarshalIndent(config, "", "  ")
 	return buf, port, err
 }
 
 func base64Decode(encoded string) ([]byte, error) {
-	// 支持不同的编码方法
+	// Support different encoding methods
 	if decoded, err := base64.RawURLEncoding.DecodeString(encoded); err == nil {
 		return decoded, nil
 	}
@@ -106,7 +106,7 @@ func base64Decode(encoded string) ([]byte, error) {
 }
 
 func createCompleteVmessConfig(vmess *VmessConfig, port int) *XRayConfig {
-	// 如果是 WebSocket 且满足自动转换条件，则优先使用 XHTTP
+	// If it's WebSocket and meets the auto-conversion conditions, prioritize using XHTTP
 	if vmess.Net == "ws" && vmess.XHTTPVer != "" {
 		vmess.Net = "xhttp"
 	}
@@ -148,7 +148,7 @@ func createCompleteVmessConfig(vmess *VmessConfig, port int) *XRayConfig {
 									"alterId":  vmess.Aid.Value(),
 									"security": getSecurityMethod(vmess),
 									"level":    0,
-									"flow":     vmess.Flow, // XTLS Flow 支持
+									"flow":     vmess.Flow, // XTLS Flow support
 								},
 							},
 						},
@@ -185,14 +185,14 @@ func getSecurityMethod(vmess *VmessConfig) string {
 	return "auto"
 }
 
-// 修改 buildEnhancedStreamSettings 函数
+// Modified buildEnhancedStreamSettings function
 func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	ss := &StreamSettings{
 		Network:  vmess.Net,
 		Security: vmess.TLS,
 	}
 
-	// 配置 TLS
+	// Configure TLS
 	if vmess.TLS == "tls" {
 		ss.TLSSettings = &TLSSettings{
 			ServerName:    vmess.Host,
@@ -212,7 +212,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 		}
 	}
 
-	// 配置 XTLS
+	// Configure XTLS
 	if vmess.TLS == "xtls" {
 		ss.Security = "xtls"
 		ss.XTLSSettings = &TLSSettings{
@@ -233,7 +233,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 		}
 	}
 
-	// 配置 Reality
+	// Configure Reality
 	if vmess.TLS == "reality" {
 		ss.Security = "reality"
 		ss.RealitySettings = &RealitySettings{
@@ -245,15 +245,14 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 		}
 	}
 
-	// 根据网络类型配置相应设置
+	// Configure settings based on network type
 	switch vmess.Net {
 	case "ws":
-		// 保留原有的 WebSocket 处理
+		// Retain original WebSocket handling
 		configureWS(ss, vmess)
 
-	case "xhttp": // 添加对明确指定使用 XHTTP 的支持
+	case "xhttp": // Add support for explicitly using XHTTP
 		configureXHTTP(ss, vmess)
-	// ... 保留其他传输类型的配置代码 ...
 	case "kcp":
 		configureKCP(ss, vmess)
 	case "tcp":
@@ -269,16 +268,16 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	return ss
 }
 
-// 添加 XHTTP 配置函数
+// Add XHTTP configuration function
 func configureXHTTP(ss *StreamSettings, vmess *VmessConfig) {
 	ss.XHTTPSettings = &XHTTPSettings{
 		Host:    vmess.Host,
 		Path:    vmess.Path,
 		Method:  "GET",
-		Version: "h2", // 默认使用 HTTP/2
+		Version: "h2", // Default to HTTP/2
 	}
 
-	// 根据可能的 ALPN 设置选择 HTTP 版本
+	// Select HTTP version based on possible ALPN settings
 	if vmess.Alpn != "" {
 		if strings.Contains(vmess.Alpn, "h3") {
 			ss.XHTTPSettings.Version = "h3"
@@ -286,14 +285,14 @@ func configureXHTTP(ss *StreamSettings, vmess *VmessConfig) {
 	}
 }
 
-// 保留原有的 WebSocket 配置，但修改为使用独立的 host 字段
+// Retain the original WebSocket configuration, but modify to use the independent host field
 func configureWS(ss *StreamSettings, vmess *VmessConfig) {
 	ss.WSSettings = &WSSettings{
 		Path: vmess.Path,
-		Host: vmess.Host, // 使用独立的 Host 字段
+		Host: vmess.Host, // Use independent Host field
 	}
 
-	// 保留其他可能的 headers，但不放 Host
+	// Retain other possible headers, but don't include Host
 	if vmess.Host != "" && len(ss.WSSettings.Headers) > 0 {
 		delete(ss.WSSettings.Headers, "Host")
 		if len(ss.WSSettings.Headers) == 0 {
@@ -365,21 +364,21 @@ func configureGRPC(ss *StreamSettings, vmess *VmessConfig) {
 	}
 }
 
-// StartVmess 启动 VMess 客户端
+// StartVmess starts a VMess client
 func StartVmess(vmessURL string, port int) (*core.Instance, int, error) {
-	// 检查是否已经运行
+	// Check if already running
 	server := getServer(vmessURL)
 	if server != nil {
 		return server.Instance, server.SocksPort, nil
 	}
 
-	// 获取 JSON 配置
+	// Get JSON configuration
 	jsonConfig, port, err := VmessToXRay(vmessURL, port)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 直接使用 Xray 的 StartInstance 函数创建服务器配置
+	// Directly use Xray's StartInstance function to create server configuration
 	instance, err := core.StartInstance("json", jsonConfig)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to start Xray instance: %w", err)

@@ -14,7 +14,7 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
-// VlessConfig 存储 VLESS URL 参数
+// VlessConfig stores VLESS URL parameters
 type VlessConfig struct {
 	UUID        string
 	Address     string
@@ -34,25 +34,25 @@ type VlessConfig struct {
 	ServiceName string
 }
 
-// ParseVless 解析 VLESS URL
+// ParseVless parses VLESS URL
 // vless://uuid@host:port?encryption=none&type=tcp&security=tls&sni=example.com...
 func ParseVless(vlessURL string) (*VlessConfig, error) {
-	// 移除 vless:// 前缀
+	// Remove vless:// prefix
 	vlessURL = strings.TrimPrefix(vlessURL, "vless://")
 
-	// 解析为标准 URL
+	// Parse as standard URL
 	u, err := url.Parse("vless://" + vlessURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid VLESS URL: %w", err)
 	}
 
-	// 提取用户信息
+	// Extract user information
 	if u.User == nil {
 		return nil, fmt.Errorf("missing user info in VLESS URL")
 	}
 	uuid := u.User.Username()
 
-	// 提取主机和端口
+	// Extract host and port
 	host, portStr, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid host:port in VLESS URL: %w", err)
@@ -63,16 +63,16 @@ func ParseVless(vlessURL string) (*VlessConfig, error) {
 		return nil, fmt.Errorf("invalid port in VLESS URL: %w", err)
 	}
 
-	// 创建配置
+	// Create configuration
 	config := &VlessConfig{
 		UUID:       uuid,
 		Address:    host,
 		Port:       port,
-		Encryption: "none", // VLESS 默认加密为 none
-		Type:       "tcp",  // 默认传输类型
+		Encryption: "none", // VLESS default encryption is none
+		Type:       "tcp",  // Default transport type
 	}
 
-	// 解析查询参数
+	// Parse query parameters
 	query := u.Query()
 
 	if v := query.Get("encryption"); v != "" {
@@ -85,7 +85,7 @@ func ParseVless(vlessURL string) (*VlessConfig, error) {
 
 	if v := query.Get("type"); v != "" {
 		config.Type = v
-		// XHTTP 作为明确支持的类型，但不自动转换
+		// XHTTP as explicitly supported type, but not auto-converted
 	}
 
 	if v := query.Get("security"); v != "" {
@@ -133,15 +133,15 @@ func ParseVless(vlessURL string) (*VlessConfig, error) {
 	return config, nil
 }
 
-// VlessToXRay 将 VLESS URL 转换为 Xray JSON 配置
+// VlessToXRay converts VLESS URL to Xray JSON configuration
 func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
-	// 解析 VLESS URL
+	// Parse VLESS URL
 	vless, err := ParseVless(vlessURL)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 获取空闲端口（如果未提供）
+	// Get a free port (if not provided)
 	if port < 1 {
 		port, err = proxyclient.GetFreePort()
 		if err != nil {
@@ -149,7 +149,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 创建 VLESS 出站配置
+	// Create VLESS outbound configuration
 	vlessSettings := map[string]interface{}{
 		"vnext": []map[string]interface{}{
 			{
@@ -167,13 +167,13 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		},
 	}
 
-	// 创建流设置
+	// Create stream settings
 	streamSettings := &StreamSettings{
 		Network:  vless.Type,
 		Security: vless.Security,
 	}
 
-	// 配置 TLS
+	// Configure TLS
 	if vless.Security == "tls" {
 		streamSettings.TLSSettings = &TLSSettings{
 			ServerName:    vless.SNI,
@@ -189,7 +189,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 配置 XTLS
+	// Configure XTLS
 	if vless.Security == "xtls" {
 		streamSettings.Security = "xtls"
 		streamSettings.XTLSSettings = &TLSSettings{
@@ -206,7 +206,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 配置 Reality
+	// Configure Reality
 	if vless.Security == "reality" {
 		streamSettings.Security = "reality"
 		streamSettings.RealitySettings = &RealitySettings{
@@ -218,15 +218,15 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 根据传输类型配置
+	// Configure based on transport type
 	switch vless.Type {
 	case "ws":
 		streamSettings.WSSettings = &WSSettings{
 			Path: vless.Path,
-			Host: vless.Host, // 使用独立的 Host 字段而非 headers
+			Host: vless.Host, // Use independent Host field instead of headers
 		}
 
-	case "xhttp": // 添加对 XHTTP 的直接支持
+	case "xhttp": // Add direct support for XHTTP
 		streamSettings.Network = "xhttp"
 		streamSettings.XHTTPSettings = &XHTTPSettings{
 			Host:    vless.Host,
@@ -235,7 +235,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 			Version: "h2",
 		}
 
-		// 根据 ALPN 设置选择 HTTP 版本
+		// Select HTTP version based on ALPN settings
 		if vless.ALPN != "" {
 			if strings.Contains(vless.ALPN, "h3") {
 				streamSettings.XHTTPSettings.Version = "h3"
@@ -269,7 +269,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	// 创建完整配置
+	// Create complete configuration
 	config := &XRayConfig{
 		Log: &LogConfig{
 			Loglevel: "warning",
@@ -318,7 +318,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		// },
 	}
 
-	// 转换为 JSON
+	// Convert to JSON
 	buf, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to marshal config to JSON: %w", err)
@@ -327,27 +327,27 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 	return buf, port, nil
 }
 
-// StartVless 启动 VLESS 客户端并返回 Xray 实例和本地 SOCKS 端口
+// StartVless starts a VLESS client and returns Xray instance and local SOCKS port
 func StartVless(vlessURL string, port int) (*core.Instance, int, error) {
-	// 检查是否已经运行
+	// Check if already running
 	server := getServer(vlessURL)
 	if server != nil {
 		return server.Instance, server.SocksPort, nil
 	}
 
-	// 转换为 Xray JSON 配置
+	// Convert to Xray JSON configuration
 	jsonConfig, port, err := VlessToXRay(vlessURL, port)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 启动 Xray 实例
+	// Start Xray instance
 	instance, err := core.StartInstance("json", jsonConfig)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to start Xray instance: %w", err)
 	}
 
-	// 注册运行的服务器
+	// Register the running server
 	setServer(vlessURL, instance, port)
 
 	fmt.Printf("VLESS proxy started on socks5://127.0.0.1:%d\n", port)

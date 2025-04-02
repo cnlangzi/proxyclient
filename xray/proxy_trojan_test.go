@@ -51,7 +51,6 @@ func TestProxyTrojan(t *testing.T) {
 		fmt.Printf("response: %s\n", string(buf))
 	})
 
-	// 测试 HTTPS 请求
 	t.Run("https", func(t *testing.T) {
 		testURL := "https://ifconfig.io/ip"
 		req, err := http.NewRequest("GET", testURL, nil)
