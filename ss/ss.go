@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -264,7 +265,9 @@ func startServer(port int, method, password, serverAddr string) (net.Listener, c
 }
 
 // StartSS starts a Shadowsocks client and returns local SOCKS port
-func StartSS(ssURL string, port int) (int, error) {
+func StartSS(u *url.URL, port int) (int, error) {
+
+	ssURL := u.String()
 	// Check if already running
 	server := getServer(ssURL)
 	if server != nil {
@@ -272,10 +275,12 @@ func StartSS(ssURL string, port int) (int, error) {
 	}
 
 	// Parse SS URL
-	ss, err := ParseSS(ssURL)
+	su, err := ParseSSURL(u)
 	if err != nil {
 		return 0, err
 	}
+
+	cfg := su.cfg
 
 	// Get a free port if none is provided
 	if port < 1 {
@@ -286,14 +291,14 @@ func StartSS(ssURL string, port int) (int, error) {
 	}
 
 	// Handle plugin if specified
-	if ss.Plugin != "" {
+	if cfg.Plugin != "" {
 		return 0, fmt.Errorf("plugins are not supported in this implementation")
 	}
 
-	serverAddr := fmt.Sprintf("%s:%d", ss.Server, ss.Port)
+	serverAddr := fmt.Sprintf("%s:%d", cfg.Server, cfg.Port)
 
 	// Start a SOCKS server that forwards to the Shadowsocks server
-	listener, cancel, err := startServer(port, ss.Method, ss.Password, serverAddr)
+	listener, cancel, err := startServer(port, cfg.Method, cfg.Password, serverAddr)
 	if err != nil {
 		return 0, err
 	}
@@ -303,8 +308,8 @@ func StartSS(ssURL string, port int) (int, error) {
 
 	// Store the running server
 	setServer(ssURL, &Server{
-		Method:     ss.Method,
-		Password:   ss.Password,
+		Method:     cfg.Method,
+		Password:   cfg.Password,
 		ServerAddr: serverAddr,
 		Listener:   listener,
 		SocksPort:  port,
