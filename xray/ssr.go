@@ -1,124 +1,14 @@
 package xray
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"net/url"
 	"strings"
 
 	"github.com/cnlangzi/proxyclient"
 	core "github.com/xtls/xray-core/core"
 )
-
-// SSRConfig stores ShadowsocksR URL parameters
-type SSRConfig struct {
-	Server        string
-	Port          int
-	Method        string
-	Password      string
-	Protocol      string
-	ProtocolParam string
-	Obfs          string
-	ObfsParam     string
-	Name          string
-}
-
-// ParseSSR parses ShadowsocksR URL
-// ssr://base64(server:port:protocol:method:obfs:base64pass/?obfsparam=base64param&protoparam=base64param&remarks=base64remarks)
-func ParseSSR(ssrURL string) (*SSRConfig, error) {
-	// Remove ssr:// prefix
-	ssrURL = strings.TrimPrefix(ssrURL, "ssr://")
-
-	// Decode base64
-	decoded, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(ssrURL)
-	if err != nil {
-		// Try standard base64
-		decoded, err = base64.StdEncoding.DecodeString(ssrURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode SSR URL: %w", err)
-		}
-	}
-
-	text := string(decoded)
-
-	// Separate main part and parameter part
-	var mainPart, paramPart string
-	if idx := strings.Index(text, "/?"); idx >= 0 {
-		mainPart = text[:idx]
-		paramPart = text[idx+2:]
-	} else if idx := strings.Index(text, "?"); idx >= 0 {
-		mainPart = text[:idx]
-		paramPart = text[idx+1:]
-	} else {
-		mainPart = text
-	}
-
-	// Parse main part
-	parts := strings.Split(mainPart, ":")
-	if len(parts) < 6 {
-		return nil, fmt.Errorf("invalid SSR URL format")
-	}
-
-	serverPort, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("invalid port: %w", err)
-	}
-
-	// Decode password
-	password, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(parts[5])
-	if err != nil {
-		// Try standard base64
-		password, err = base64.StdEncoding.DecodeString(parts[5])
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode password: %w", err)
-		}
-	}
-
-	config := &SSRConfig{
-		Server:   parts[0],
-		Port:     serverPort,
-		Protocol: parts[2],
-		Method:   parts[3],
-		Obfs:     parts[4],
-		Password: string(password),
-	}
-
-	// Parse parameter part
-	if paramPart != "" {
-		params := strings.Split(paramPart, "&")
-		for _, param := range params {
-			kv := strings.SplitN(param, "=", 2)
-			if len(kv) != 2 {
-				continue
-			}
-
-			key := kv[0]
-			value := kv[1]
-
-			decodedValue, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(value)
-			if err != nil {
-				// Try standard base64
-				decodedValue, err = base64.StdEncoding.DecodeString(value)
-				if err != nil {
-					// Use original value
-					decodedValue = []byte(value)
-				}
-			}
-
-			switch key {
-			case "obfsparam":
-				config.ObfsParam = string(decodedValue)
-			case "protoparam":
-				config.ProtocolParam = string(decodedValue)
-			case "remarks":
-				config.Name = string(decodedValue)
-			}
-		}
-	}
-
-	return config, nil
-}
 
 // convertSSRMethod converts SSR encryption method to Xray supported method
 func convertSSRMethod(method string) (string, error) {
@@ -177,17 +67,19 @@ func isBasicSSR(config *SSRConfig) bool {
 }
 
 // SSRToXRay converts SSR URL to Xray JSON configuration
-func SSRToXRay(ssrURL string, port int) ([]byte, int, error) {
+func SSRToXRay(u *url.URL, port int) ([]byte, int, error) {
 	// Parse SSR URL
-	ssr, err := ParseSSR(ssrURL)
+	su, err := ParseSSRURL(u)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to parse SSR URL: %w", err)
 	}
 
+	cfg := su.cfg
+
 	// Check if configuration is supported
-	if !isBasicSSR(ssr) {
+	if !isBasicSSR(cfg) {
 		return nil, 0, fmt.Errorf("unsupported SSR configuration (protocol: %s, obfs: %s, method: %s)",
-			ssr.Protocol, ssr.Obfs, ssr.Method)
+			cfg.Protocol, cfg.Obfs, cfg.Method)
 	}
 
 	// Get a free port (if not provided)
@@ -199,27 +91,27 @@ func SSRToXRay(ssrURL string, port int) ([]byte, int, error) {
 	}
 
 	// Convert SSR method to Xray method
-	xrayMethod, err := convertSSRMethod(ssr.Method)
+	xrayMethod, err := convertSSRMethod(cfg.Method)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Create password with protocol/obfuscation configuration
-	effectivePassword := ssr.Password
+	effectivePassword := cfg.Password
 
 	// Handle protocol
-	if strings.ToLower(ssr.Protocol) != "origin" {
-		effectivePassword = fmt.Sprintf("%s:%s", ssr.Protocol, effectivePassword)
-		if ssr.ProtocolParam != "" {
-			effectivePassword = fmt.Sprintf("%s?protocolparam=%s", effectivePassword, ssr.ProtocolParam)
+	if strings.ToLower(cfg.Protocol) != "origin" {
+		effectivePassword = fmt.Sprintf("%s:%s", cfg.Protocol, effectivePassword)
+		if cfg.ProtocolParam != "" {
+			effectivePassword = fmt.Sprintf("%s?protocolparam=%s", effectivePassword, cfg.ProtocolParam)
 		}
 	}
 
 	// Handle obfuscation
-	if strings.ToLower(ssr.Obfs) != "plain" {
-		effectivePassword = fmt.Sprintf("%s:%s", ssr.Obfs, effectivePassword)
-		if ssr.ObfsParam != "" {
-			effectivePassword = fmt.Sprintf("%s?obfsparam=%s", effectivePassword, ssr.ObfsParam)
+	if strings.ToLower(cfg.Obfs) != "plain" {
+		effectivePassword = fmt.Sprintf("%s:%s", cfg.Obfs, effectivePassword)
+		if cfg.ObfsParam != "" {
+			effectivePassword = fmt.Sprintf("%s?obfsparam=%s", effectivePassword, cfg.ObfsParam)
 		}
 	}
 
@@ -227,8 +119,8 @@ func SSRToXRay(ssrURL string, port int) ([]byte, int, error) {
 	ssSettings := map[string]interface{}{
 		"servers": []map[string]interface{}{
 			{
-				"address":  ssr.Server,
-				"port":     ssr.Port,
+				"address":  cfg.Server,
+				"port":     cfg.Port,
 				"method":   xrayMethod,
 				"password": effectivePassword,
 				"uot":      true,
@@ -296,7 +188,8 @@ func SSRToXRay(ssrURL string, port int) ([]byte, int, error) {
 }
 
 // StartSSR starts SSR client and returns Xray instance and local SOCKS port
-func StartSSR(ssrURL string, port int) (*core.Instance, int, error) {
+func StartSSR(u *url.URL, port int) (*core.Instance, int, error) {
+	ssrURL := u.String()
 	// Check if already running
 	server := getServer(ssrURL)
 	if server != nil {
@@ -304,7 +197,7 @@ func StartSSR(ssrURL string, port int) (*core.Instance, int, error) {
 	}
 
 	// Convert to Xray JSON configuration
-	jsonConfig, port, err := SSRToXRay(ssrURL, port)
+	jsonConfig, port, err := SSRToXRay(u, port)
 	if err != nil {
 		return nil, 0, err
 	}

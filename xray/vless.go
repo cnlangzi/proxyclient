@@ -3,6 +3,7 @@ package xray
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 
@@ -16,13 +17,9 @@ func init() {
 }
 
 // VlessToXRay converts VLESS URL to Xray JSON configuration
-func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
-	// Parse VLESS URL
-	vless, err := ParseVlessURL(vlessURL)
-	if err != nil {
-		return nil, 0, err
-	}
+func VlessToXRay(vu *VlessURL, port int) ([]byte, int, error) {
 
+	var err error
 	// Get a free port (if not provided)
 	if port < 1 {
 		port, err = proxyclient.GetFreePort()
@@ -31,7 +28,7 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 		}
 	}
 
-	cfg := vless.cfg
+	cfg := vu.cfg
 
 	// Create VLESS outbound configuration
 	vlessSettings := map[string]interface{}{
@@ -212,15 +209,23 @@ func VlessToXRay(vlessURL string, port int) ([]byte, int, error) {
 }
 
 // StartVless starts a VLESS client and returns Xray instance and local SOCKS port
-func StartVless(vlessURL string, port int) (*core.Instance, int, error) {
+func StartVless(u *url.URL, port int) (*core.Instance, int, error) {
+
+	vlessURL := u.String()
+
 	// Check if already running
 	server := getServer(vlessURL)
 	if server != nil {
 		return server.Instance, server.SocksPort, nil
 	}
 
+	vu, err := ParseVlessURL(u)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// Convert to Xray JSON configuration
-	jsonConfig, port, err := VlessToXRay(vlessURL, port)
+	jsonConfig, port, err := VlessToXRay(vu, port)
 	if err != nil {
 		return nil, 0, err
 	}

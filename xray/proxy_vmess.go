@@ -13,7 +13,7 @@ func init() {
 }
 
 func ProxyVmess(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	_, port, err := StartVmess(u.String(), 0)
+	_, port, err := StartVmess(u, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start VMess proxy: %w", err)
 	}

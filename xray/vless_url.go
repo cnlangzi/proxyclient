@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	// Register the VLESS parser
+	// Register the VLESS url parser
 	proxyclient.RegisterParser("vless", func(u *url.URL) (proxyclient.URL, error) {
 		return ParseVlessURL(u)
 	})
@@ -37,7 +37,7 @@ type VlessConfig struct {
 	ServiceName   string
 	AllowInsecure bool // Controls whether to allow insecure TLS connections
 
-	url *url.URL
+	raw *url.URL `json:"-"`
 }
 
 type VlessURL struct {
@@ -45,7 +45,11 @@ type VlessURL struct {
 }
 
 func (v *VlessURL) Raw() *url.URL {
-	return v.cfg.url
+	return v.cfg.raw
+}
+
+func (v *VlessURL) Title() string {
+	return "vless://" + v.Host() + ":" + v.Port()
 }
 
 func (v *VlessURL) Host() string {
@@ -84,7 +88,7 @@ func ParseVlessURL(u *url.URL) (*VlessURL, error) {
 		Encryption:    "none", // VLESS default encryption is none
 		Type:          "tcp",  // Default transport type
 		AllowInsecure: true,
-		url:           u,
+		raw:           u,
 	}
 
 	// Parse query parameters
