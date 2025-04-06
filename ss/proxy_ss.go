@@ -20,7 +20,7 @@ func init() {
 // ProxySsSocks5 creates a RoundTripper for Shadowsocks proxy
 func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Start Shadowsocks instance
-	port, err := StartSS(u.String(), 0)
+	port, err := StartSS(u, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -33,10 +33,11 @@ func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error
 
 func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
-	cfg, err := ParseSS(u.String())
+	su, err := ParseSSURL(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Shadowsocks URL: %w", err)
 	}
+	cfg := su.cfg
 
 	m, err := createMethod(cfg.Method, cfg.Password)
 	if err != nil {
