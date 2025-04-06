@@ -13,7 +13,7 @@ func init() {
 }
 
 func ProxyVless(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	_, port, err := StartVless(u.String(), 0)
+	_, port, err := StartVless(u, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start VLESS proxy: %w", err)
 	}

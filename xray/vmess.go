@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 
@@ -12,60 +13,18 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
-// VmessConfig stores VMess URL parameters
-type VmessConfig struct {
-	V             string              `json:"v"`
-	PS            string              `json:"ps"`               // Remarks
-	Add           string              `json:"add"`              // Address
-	Port          proxyclient.JsonInt `json:"port"`             // Port
-	ID            string              `json:"id"`               // UUID
-	Aid           proxyclient.JsonInt `json:"aid"`              // AlterID
-	Net           string              `json:"net"`              // Transport protocol
-	Type          string              `json:"type"`             // Camouflage type
-	Host          string              `json:"host"`             // Camouflage domain
-	Path          string              `json:"path"`             // WebSocket path
-	TLS           string              `json:"tls"`              // TLS
-	SNI           string              `json:"sni"`              // TLS SNI
-	Alpn          string              `json:"alpn"`             // ALPN
-	Flow          string              `json:"flow"`             // XTLS Flow
-	Fp            string              `json:"fp"`               // Fingerprint
-	PbK           string              `json:"pbk"`              // PublicKey (Reality)
-	Sid           string              `json:"sid"`              // ShortID (Reality)
-	SpX           string              `json:"spx"`              // SpiderX (Reality)
-	Security      string              `json:"security"`         // Encryption method
-	XHTTPVer      string              `json:"xver"`             // XHTTP version, "h2" or "h3"
-	AllowInsecure bool                `json:"skip_cert_verify"` // Controls whether to allow insecure TLS connections
-}
-
 // VmessToXRay converts VMess URL to Xray JSON configuration
-func VmessToXRay(vmessURL string, port int) ([]byte, int, error) {
-	// Remove vmess:// prefix
-	encoded := strings.TrimPrefix(vmessURL, "vmess://")
-
-	// Base64 decode
-	decoded, err := base64Decode(encoded)
-	if err != nil {
-		return nil, 0, fmt.Errorf("base64 decode failed: %w", err)
-	}
-
-	// Parse to VMessConfig
-	vmess := &VmessConfig{
-		AllowInsecure: true,
-	}
-
-	if err := json.Unmarshal(decoded, vmess); err != nil {
-		return nil, 0, fmt.Errorf("JSON parsing failed: %w", err)
-	}
-
-	// If vmess.Net is "xhttp", we should handle it properly
-	// This should typically be in the JSON processing part after base64 decoding
-
+func VmessToXRay(vmess *VmessConfig, port int) ([]byte, int, error) {
+	var err error
 	if port < 1 {
 		port, err = proxyclient.GetFreePort()
 		if err != nil {
 			return nil, 0, err
 		}
 	}
+
+	// If vmess.Net is "xhttp", we should handle it properly
+	// This should typically be in the JSON processing part after base64 decoding
 
 	// Generate complete Xray configuration
 	config := createCompleteVmessConfig(vmess, port)
@@ -343,15 +302,23 @@ func configureGRPC(ss *StreamSettings, vmess *VmessConfig) {
 }
 
 // StartVmess starts a VMess client
-func StartVmess(vmessURL string, port int) (*core.Instance, int, error) {
+func StartVmess(u *url.URL, port int) (*core.Instance, int, error) {
+
+	vmessURL := u.String()
+
 	// Check if already running
 	server := getServer(vmessURL)
 	if server != nil {
 		return server.Instance, server.SocksPort, nil
 	}
 
+	vu, err := ParseVmessURL(u)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// Get JSON configuration
-	jsonConfig, port, err := VmessToXRay(vmessURL, port)
+	jsonConfig, port, err := VmessToXRay(vu.cfg, port)
 	if err != nil {
 		return nil, 0, err
 	}

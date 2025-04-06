@@ -15,7 +15,7 @@ func init() {
 // ProxySSR creates a RoundTripper for SSR proxy
 func ProxySSR(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Start SSR client through Xray
-	_, port, err := StartSSR(u.String(), 0)
+	_, port, err := StartSSR(u, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start SSR proxy: %w", err)
 	}
