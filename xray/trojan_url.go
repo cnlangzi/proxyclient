@@ -13,7 +13,7 @@ import (
 func init() {
 	// Register the SSR url parser
 	proxyclient.RegisterParser("trojan", func(u *url.URL) (proxyclient.URL, error) {
-		return ParseSSRURL(u)
+		return ParseTrojanURL(u)
 	})
 }
 
