@@ -74,7 +74,7 @@ func SSRToXRay(u *url.URL, port int) ([]byte, int, error) {
 		return nil, 0, fmt.Errorf("failed to parse SSR URL: %w", err)
 	}
 
-	cfg := su.cfg
+	cfg := su.Config
 
 	// Check if configuration is supported
 	if !isBasicSSR(cfg) {
