@@ -48,8 +48,8 @@ func (v *VlessURL) Raw() *url.URL {
 	return v.Config.raw
 }
 
-func (v *VlessURL) Title() string {
-	return "vless://" + v.Host() + ":" + v.Port()
+func (v *VlessURL) Opaque() string {
+	return strings.TrimPrefix(v.Config.raw.String(), "vless://")
 }
 
 func (v *VlessURL) Host() string {

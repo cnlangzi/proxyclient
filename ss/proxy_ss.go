@@ -37,7 +37,7 @@ func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Shadowsocks URL: %w", err)
 	}
-	cfg := su.cfg
+	cfg := su.Config
 
 	m, err := createMethod(cfg.Method, cfg.Password)
 	if err != nil {

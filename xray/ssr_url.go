@@ -40,8 +40,8 @@ func (v *SSRURL) Raw() *url.URL {
 	return v.Config.raw
 }
 
-func (v *SSRURL) Title() string {
-	return "ssr://" + v.Host() + ":" + v.Port()
+func (v *SSRURL) Opaque() string {
+	return strings.TrimPrefix(v.Config.raw.String(), "")
 }
 
 func (v *SSRURL) Host() string {

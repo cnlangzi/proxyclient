@@ -14,7 +14,7 @@ func RegisterParser(proto string, f FuncParser) {
 
 type URL interface {
 	Raw() *url.URL
-	Title() string
+	Opaque() string
 	Protocol() string
 	Host() string
 	Port() string
@@ -30,8 +30,8 @@ func (u *stdURL) Raw() *url.URL {
 	return &u.URL
 }
 
-func (u *stdURL) Title() string {
-	return u.URL.String()
+func (u *stdURL) Opaque() string {
+	return u.URL.Opaque
 }
 
 func (u *stdURL) Host() string {
