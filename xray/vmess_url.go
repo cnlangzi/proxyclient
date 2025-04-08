@@ -52,8 +52,8 @@ func (v *VmessURL) Raw() *url.URL {
 	return v.Config.raw
 }
 
-func (v *VmessURL) Title() string {
-	return "vmess://" + v.Host() + ":" + v.Port()
+func (v *VmessURL) Opaque() string {
+	return strings.TrimPrefix(v.Config.raw.String(), "vmess://")
 }
 
 func (v *VmessURL) Host() string {

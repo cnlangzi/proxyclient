@@ -280,7 +280,7 @@ func StartSS(u *url.URL, port int) (int, error) {
 		return 0, err
 	}
 
-	cfg := su.cfg
+	cfg := su.Config
 
 	// Get a free port if none is provided
 	if port < 1 {

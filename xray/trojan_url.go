@@ -44,8 +44,8 @@ func (v *TrojanURL) Raw() *url.URL {
 	return v.Config.raw
 }
 
-func (v *TrojanURL) Title() string {
-	return "trojan://" + v.Host() + ":" + v.Port()
+func (v *TrojanURL) Opaque() string {
+	return strings.TrimPrefix(v.Config.raw.String(), "trojan://")
 }
 
 func (v *TrojanURL) Host() string {

@@ -30,23 +30,23 @@ type Config struct {
 }
 
 type URL struct {
-	cfg *Config
+	Config *Config
 }
 
 func (v *URL) Raw() *url.URL {
-	return v.cfg.raw
+	return v.Config.raw
 }
 
-func (v *URL) Title() string {
-	return "ssr://" + v.Host() + ":" + v.Port()
+func (v *URL) Opaque() string {
+	return strings.TrimPrefix(v.Config.raw.String(), "")
 }
 
 func (v *URL) Host() string {
-	return v.cfg.Server
+	return v.Config.Server
 }
 
 func (v *URL) Port() string {
-	return strconv.Itoa(v.cfg.Port)
+	return strconv.Itoa(v.Config.Port)
 }
 
 func (v *URL) Protocol() string {
@@ -172,5 +172,5 @@ func ParseSSURL(u *url.URL) (*URL, error) {
 		raw: u,
 	}
 
-	return &URL{cfg: cfg}, nil
+	return &URL{Config: cfg}, nil
 }
