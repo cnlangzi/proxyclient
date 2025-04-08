@@ -64,6 +64,18 @@ func (v *VmessURL) Port() string {
 	return strconv.Itoa(v.Config.Port.Value())
 }
 
+func (v *VmessURL) Protocol() string {
+	return "vmess"
+}
+
+func (v *VmessURL) User() string {
+	return v.Config.ID
+}
+
+func (v *VmessURL) Password() string {
+	return ""
+}
+
 func ParseVmessURL(u *url.URL) (*VmessURL, error) {
 
 	vmessURL := u.String()

@@ -52,6 +52,18 @@ func (v *SSRURL) Port() string {
 	return strconv.Itoa(v.Config.Port)
 }
 
+func (v *SSRURL) Protocol() string {
+	return "ssr"
+}
+
+func (v *SSRURL) User() string {
+	return ""
+}
+
+func (v *SSRURL) Password() string {
+	return v.Config.Password
+}
+
 func ParseSSRURL(u *url.URL) (*SSRURL, error) {
 
 	ssrURL := u.String()

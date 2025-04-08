@@ -56,6 +56,18 @@ func (v *TrojanURL) Port() string {
 	return strconv.Itoa(v.Config.Port)
 }
 
+func (v *TrojanURL) User() string {
+	return ""
+}
+
+func (v *TrojanURL) Password() string {
+	return v.Config.Password
+}
+
+func (v *TrojanURL) Protocol() string {
+	return "trojan"
+}
+
 // ParseTrojanURL parses Trojan URL
 // trojan://password@host:port?security=tls&type=tcp&sni=example.com...
 func ParseTrojanURL(u *url.URL) (*TrojanURL, error) {

@@ -49,6 +49,18 @@ func (v *URL) Port() string {
 	return strconv.Itoa(v.cfg.Port)
 }
 
+func (v *URL) Protocol() string {
+	return "ss"
+}
+
+func (v *URL) User() string {
+	return ""
+}
+
+func (v *URL) Password() string {
+	return ""
+}
+
 // ParseSSURL parses a Shadowsocks URL
 func ParseSSURL(u *url.URL) (*URL, error) {
 
