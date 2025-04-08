@@ -318,7 +318,7 @@ func StartVmess(u *url.URL, port int) (*core.Instance, int, error) {
 	}
 
 	// Get JSON configuration
-	jsonConfig, port, err := VmessToXRay(vu.cfg, port)
+	jsonConfig, port, err := VmessToXRay(vu.Config, port)
 	if err != nil {
 		return nil, 0, err
 	}

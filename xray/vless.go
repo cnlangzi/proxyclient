@@ -28,7 +28,7 @@ func VlessToXRay(vu *VlessURL, port int) ([]byte, int, error) {
 		}
 	}
 
-	cfg := vu.cfg
+	cfg := vu.Config
 
 	// Create VLESS outbound configuration
 	vlessSettings := map[string]interface{}{

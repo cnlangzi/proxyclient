@@ -33,11 +33,11 @@ type SSRConfig struct {
 }
 
 type SSRURL struct {
-	cfg *SSRConfig
+	Config *SSRConfig
 }
 
 func (v *SSRURL) Raw() *url.URL {
-	return v.cfg.raw
+	return v.Config.raw
 }
 
 func (v *SSRURL) Title() string {
@@ -45,11 +45,11 @@ func (v *SSRURL) Title() string {
 }
 
 func (v *SSRURL) Host() string {
-	return v.cfg.Server
+	return v.Config.Server
 }
 
 func (v *SSRURL) Port() string {
-	return strconv.Itoa(v.cfg.Port)
+	return strconv.Itoa(v.Config.Port)
 }
 
 func ParseSSRURL(u *url.URL) (*SSRURL, error) {
@@ -148,6 +148,6 @@ func ParseSSRURL(u *url.URL) (*SSRURL, error) {
 	}
 
 	return &SSRURL{
-		cfg: cfg,
+		Config: cfg,
 	}, nil
 }

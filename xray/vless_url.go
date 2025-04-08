@@ -41,11 +41,11 @@ type VlessConfig struct {
 }
 
 type VlessURL struct {
-	cfg *VlessConfig
+	Config *VlessConfig
 }
 
 func (v *VlessURL) Raw() *url.URL {
-	return v.cfg.raw
+	return v.Config.raw
 }
 
 func (v *VlessURL) Title() string {
@@ -53,11 +53,11 @@ func (v *VlessURL) Title() string {
 }
 
 func (v *VlessURL) Host() string {
-	return v.cfg.Address
+	return v.Config.Address
 }
 
 func (v *VlessURL) Port() string {
-	return strconv.Itoa(v.cfg.Port)
+	return strconv.Itoa(v.Config.Port)
 }
 
 // ParseVlessURL parses VLESS URL
@@ -156,6 +156,6 @@ func ParseVlessURL(u *url.URL) (*VlessURL, error) {
 	}
 
 	return &VlessURL{
-		cfg: cfg,
+		Config: cfg,
 	}, nil
 }

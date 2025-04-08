@@ -45,11 +45,11 @@ type VmessConfig struct {
 }
 
 type VmessURL struct {
-	cfg *VmessConfig
+	Config *VmessConfig
 }
 
 func (v *VmessURL) Raw() *url.URL {
-	return v.cfg.raw
+	return v.Config.raw
 }
 
 func (v *VmessURL) Title() string {
@@ -57,11 +57,11 @@ func (v *VmessURL) Title() string {
 }
 
 func (v *VmessURL) Host() string {
-	return v.cfg.Add
+	return v.Config.Add
 }
 
 func (v *VmessURL) Port() string {
-	return strconv.Itoa(v.cfg.Port.Value())
+	return strconv.Itoa(v.Config.Port.Value())
 }
 
 func ParseVmessURL(u *url.URL) (*VmessURL, error) {
@@ -89,6 +89,6 @@ func ParseVmessURL(u *url.URL) (*VmessURL, error) {
 	vmess.raw = u
 
 	return &VmessURL{
-		cfg: vmess,
+		Config: vmess,
 	}, nil
 }
