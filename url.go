@@ -1,6 +1,7 @@
 package proxyclient
 
 import (
+	"net"
 	"net/url"
 )
 
@@ -35,7 +36,8 @@ func (u *stdURL) Opaque() string {
 }
 
 func (u *stdURL) Host() string {
-	return u.URL.Host
+	h, _, _ := net.SplitHostPort(u.URL.Host)
+	return h
 }
 func (u *stdURL) Port() string {
 	return u.URL.Port()
