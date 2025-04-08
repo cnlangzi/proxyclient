@@ -36,7 +36,10 @@ func (u *stdURL) Opaque() string {
 }
 
 func (u *stdURL) Host() string {
-	h, _, _ := net.SplitHostPort(u.URL.Host)
+	h, _, err := net.SplitHostPort(u.URL.Host)
+	if err != nil {
+		return u.URL.Host
+	}
 	return h
 }
 func (u *stdURL) Port() string {
