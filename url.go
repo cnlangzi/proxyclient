@@ -15,8 +15,11 @@ func RegisterParser(proto string, f FuncParser) {
 type URL interface {
 	Raw() *url.URL
 	Title() string
+	Protocol() string
 	Host() string
 	Port() string
+	User() string
+	Password() string
 }
 
 type stdURL struct {
@@ -36,6 +39,23 @@ func (u *stdURL) Host() string {
 }
 func (u *stdURL) Port() string {
 	return u.URL.Port()
+}
+
+func (u *stdURL) Protocol() string {
+	return u.URL.Scheme
+}
+func (u *stdURL) User() string {
+	if u.URL.User == nil {
+		return ""
+	}
+	return u.URL.User.Username()
+}
+func (u *stdURL) Password() string {
+	if u.URL.User == nil {
+		return ""
+	}
+	passwd, _ := u.URL.User.Password()
+	return passwd
 }
 
 func ParseURL(u string) (URL, error) {

@@ -60,6 +60,18 @@ func (v *VlessURL) Port() string {
 	return strconv.Itoa(v.Config.Port)
 }
 
+func (v *VlessURL) User() string {
+	return v.Config.UUID
+}
+
+func (v *VlessURL) Password() string {
+	return ""
+}
+
+func (v *VlessURL) Protocol() string {
+	return "vless"
+}
+
 // ParseVlessURL parses VLESS URL
 // vless://uuid@host:port?encryption=none&type=tcp&security=tls&sni=example.com...
 func ParseVlessURL(u *url.URL) (*VlessURL, error) {
