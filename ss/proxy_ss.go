@@ -50,7 +50,7 @@ func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("ss: Error in DialContext: %v\n", err)
+				log.Printf("ss: painic in dial to %s by %s : %v\n", addr, su.Raw().String(), err)
 			}
 		}()
 		serverAddr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
