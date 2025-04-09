@@ -18,8 +18,8 @@ func init() {
 	proxyclient.RegisterProxy("ss", ProxySS)
 }
 
-// ProxySsSocks5 creates a RoundTripper for Shadowsocks proxy
-func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
+// ProxySS creates a RoundTripper for Shadowsocks proxy
+func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Start Shadowsocks instance
 	port, err := StartSS(u, 0)
 	if err != nil {
@@ -32,7 +32,7 @@ func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error
 	return proxyclient.ProxySocks5(proxyURL, o)
 }
 
-func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
+func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
 	su, err := ParseSSURL(u)
 	if err != nil {
