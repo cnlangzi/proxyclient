@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -47,6 +48,11 @@ func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr := proxyclient.CreateTransport(o)
 
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("ss: Error in DialContext: %v\n", err)
+			}
+		}()
 		serverAddr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
 		conn, err := net.Dial("tcp", serverAddr)
 		if err != nil {
