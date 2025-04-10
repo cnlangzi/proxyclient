@@ -81,7 +81,12 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 }
 
 func dialSsConn(m shadowsocks.Method, c net.Conn, addr string) (conn net.Conn, err error) {
-	defer recover() // nolint: errcheck
+	defer func() {
+		if r := recover(); r != nil {
+			conn = nil
+			err = fmt.Errorf("ss: recovered from panic: %v", r)
+		}
+	}()
 
 	destination := metadata.ParseSocksaddr(addr)
 	conn, err = m.DialConn(c, destination)
