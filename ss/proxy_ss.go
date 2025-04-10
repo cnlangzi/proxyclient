@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	proxyclient.RegisterProxy("ss", ProxySS)
+	proxyclient.RegisterProxy("ss", DialSS)
 }
 
 // ProxySS creates a RoundTripper for Shadowsocks proxy
