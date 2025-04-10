@@ -4,21 +4,23 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 
 	"github.com/cnlangzi/proxyclient"
+	shadowsocks "github.com/sagernet/sing-shadowsocks"
 	"github.com/sagernet/sing/common/metadata"
 )
 
 func init() {
-	proxyclient.RegisterProxy("ss", ProxySS)
+	proxyclient.RegisterProxy("ss", DialSS)
 }
 
-// ProxySsSocks5 creates a RoundTripper for Shadowsocks proxy
-func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
+// ProxySS creates a RoundTripper for Shadowsocks proxy
+func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Start Shadowsocks instance
 	port, err := StartSS(u, 0)
 	if err != nil {
@@ -31,7 +33,7 @@ func ProxySsSocks5(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error
 	return proxyclient.ProxySocks5(proxyURL, o)
 }
 
-func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
+func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
 	su, err := ParseSSURL(u)
 	if err != nil {
@@ -47,17 +49,23 @@ func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr := proxyclient.CreateTransport(o)
 
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+
 		serverAddr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
 		conn, err := net.Dial("tcp", serverAddr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to Shadowsocks server: %w", err)
 		}
 
-		destination := metadata.ParseSocksaddr(addr)
+		ssConn, err := dialSsConn(m, conn, addr)
 
-		ssConn, err := m.DialConn(conn, destination)
+		if ssConn == nil {
+			log.Printf("ss: panic on %s \n", su.Raw().String())
+			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
+		}
+
 		if err != nil {
 			conn.Close()
+			log.Printf("ss: panic on %s \n", su.Raw().String())
 			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
 		}
 
@@ -70,4 +78,13 @@ func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr.Proxy = nil
 
 	return tr, nil
+}
+
+func dialSsConn(m shadowsocks.Method, c net.Conn, addr string) (conn net.Conn, err error) {
+	defer recover() // nolint: errcheck
+
+	destination := metadata.ParseSocksaddr(addr)
+	conn, err = m.DialConn(c, destination)
+
+	return
 }

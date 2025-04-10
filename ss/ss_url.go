@@ -38,7 +38,7 @@ func (v *URL) Raw() *url.URL {
 }
 
 func (v *URL) Opaque() string {
-	return strings.TrimPrefix(v.Config.raw.String(), "")
+	return strings.TrimPrefix(v.Config.raw.String(), "ss://")
 }
 
 func (v *URL) Host() string {
