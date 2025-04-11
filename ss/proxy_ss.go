@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/cnlangzi/proxyclient"
-	shadowsocks "github.com/sagernet/sing-shadowsocks"
 	"github.com/sagernet/sing/common/metadata"
 )
 
@@ -56,7 +55,11 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 			return nil, fmt.Errorf("failed to connect to Shadowsocks server: %w", err)
 		}
 
-		ssConn, err := dialSsConn(m, conn, addr)
+		destination := metadata.ParseSocksaddr(addr)
+
+		ssConn, err := proxyclient.WithRecover(func() (net.Conn, error) {
+			return m.DialConn(conn, destination)
+		})
 
 		if ssConn == nil {
 			log.Printf("ss: panic on %s \n", su.Raw().String())
@@ -78,13 +81,4 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr.Proxy = nil
 
 	return tr, nil
-}
-
-func dialSsConn(m shadowsocks.Method, c net.Conn, addr string) (conn net.Conn, err error) {
-	defer recover() // nolint: errcheck
-
-	destination := metadata.ParseSocksaddr(addr)
-	conn, err = m.DialConn(c, destination)
-
-	return
 }
