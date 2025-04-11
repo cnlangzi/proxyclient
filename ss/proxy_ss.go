@@ -81,6 +81,7 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 }
 
 func dialSsConn(m shadowsocks.Method, c net.Conn, addr string) (conn net.Conn, err error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			conn = nil
