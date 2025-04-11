@@ -30,7 +30,7 @@ func ProxySSR(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 // DialSSR creates a custom transport that dials directly to the v2ray server
 // instead of using a local SOCKS proxy.
 func DialSSR(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	instance, _, err := StartVmess(u, 0)
+	instance, _, err := StartSSR(u, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start ssr proxy: %w", err)
 	}
