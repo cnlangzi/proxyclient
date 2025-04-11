@@ -32,7 +32,7 @@ func ProxyTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) 
 func DialTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	instance, _, err := StartTrojan(u, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start Trojan proxy: %w", err)
+		return nil, fmt.Errorf("failed to start trojan proxy: %w", err)
 	}
 
 	// Create a transport that uses our custom dialer
