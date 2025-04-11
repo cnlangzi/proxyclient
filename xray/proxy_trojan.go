@@ -30,7 +30,7 @@ func ProxyTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) 
 // DialTrojan creates a custom transport that dials directly to the v2ray server
 // instead of using a local SOCKS proxy.
 func DialTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	instance, _, err := StartVmess(u, 0)
+	instance, _, err := StartTrojan(u, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start Trojan proxy: %w", err)
 	}
