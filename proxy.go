@@ -1,6 +1,7 @@
 package proxyclient
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -39,4 +40,13 @@ func GetFreePort() (int, error) {
 
 	addr := listener.Addr().(*net.TCPAddr)
 	return addr.Port, nil
+}
+
+func WithRecover(dial func() (net.Conn, error)) (conn net.Conn, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			conn, err = nil, fmt.Errorf("net: dial panic: %v", r)
+		}
+	}()
+	return dial()
 }
