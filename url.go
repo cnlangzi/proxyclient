@@ -90,14 +90,5 @@ func IsIP(s string) bool {
 var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 func IsDomain(s string) bool {
-	if !regexDomain.MatchString(strings.ToLower(s)) {
-		return false
-	}
-
-	ips, err := net.LookupIP(s)
-	if err != nil {
-		return false
-	}
-
-	return len(ips) > 0
+	return regexDomain.MatchString(strings.ToLower(s))
 }
