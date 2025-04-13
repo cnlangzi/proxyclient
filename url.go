@@ -80,7 +80,7 @@ func ParseURL(u string) (URL, error) {
 }
 
 func IsHost(s string) bool {
-	return IsIP(s) && IsDomain(s)
+	return IsIP(s) || IsDomain(s)
 }
 
 func IsIP(s string) bool {
