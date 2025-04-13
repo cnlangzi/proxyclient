@@ -24,7 +24,7 @@ func (i *String) UnmarshalJSON(data []byte) error {
 	// If that fails, try to unmarshal as a string
 	var s any
 	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("value must be an integer or a string representation of an integer: %w", err)
+		return fmt.Errorf("value must be a string or a value that can be converted to a string: %w", err)
 	}
 
 	v = fmt.Sprint(s)
