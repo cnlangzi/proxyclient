@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrUnknownProxy = errors.New("proxyclient: unknown proxy protocol")
+	ErrUnknownProtocol = errors.New("proxyclient: unknown proxy protocol")
+	ErrInvalidHost     = errors.New("proxyclient: invalid proxy host")
 )
 
 func New(proxyURL string, options ...Option) (*http.Client, error) {
@@ -34,7 +35,7 @@ func New(proxyURL string, options ...Option) (*http.Client, error) {
 
 	f, ok := supportProxies[strings.ToLower(u.Scheme)]
 	if !ok {
-		return nil, ErrUnknownProxy
+		return nil, ErrUnknownProtocol
 	}
 
 	c.Transport, err = f(u, opt)
