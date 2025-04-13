@@ -126,11 +126,13 @@ func getSecurityMethod(vmess *VmessConfig) string {
 func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	ss := &StreamSettings{
 		Network:  vmess.Net,
-		Security: vmess.TLS,
+		Security: vmess.TLS.Value(),
 	}
 
+	tls := vmess.TLS.Value()
+
 	// Configure TLS
-	if vmess.TLS == "tls" {
+	if tls == "tls" || tls == "true" {
 		ss.TLSSettings = &TLSSettings{
 			ServerName:    vmess.Host,
 			AllowInsecure: vmess.AllowInsecure, // Use the value read from configuration
@@ -150,7 +152,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	}
 
 	// Configure XTLS
-	if vmess.TLS == "xtls" {
+	if tls == "xtls" {
 		ss.Security = "xtls"
 		ss.XTLSSettings = &TLSSettings{
 			ServerName:    vmess.Host,
@@ -171,7 +173,7 @@ func buildEnhancedStreamSettings(vmess *VmessConfig) *StreamSettings {
 	}
 
 	// Configure Reality
-	if vmess.TLS == "reality" {
+	if tls == "reality" {
 		ss.Security = "reality"
 		ss.RealitySettings = &RealitySettings{
 			ServerName:  vmess.SNI,
