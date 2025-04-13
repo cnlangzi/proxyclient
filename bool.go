@@ -25,7 +25,7 @@ func (i *Bool) UnmarshalJSON(data []byte) error {
 	// If that fails, try to unmarshal as a string
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
-		return fmt.Errorf("value must be an integer or a string representation of an integer: %w", err)
+		return fmt.Errorf("value must be a boolean or a string representation of a boolean: %w", err)
 	}
 
 	s = strings.ToLower(s)
