@@ -23,12 +23,22 @@ func CreateTransport(o *Options) *http.Transport {
 		return o.Transport
 	}
 
-	return &http.Transport{
-		DisableKeepAlives:   false,
-		MaxIdleConns:        100,
-		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 30 * time.Second,
+	tr := &http.Transport{
+		DisableKeepAlives: false,
+		MaxIdleConns:      5,
+		IdleConnTimeout:   3 * time.Second,
 	}
+
+	if o.Timeout > 0 {
+		tr.DialContext = (&net.Dialer{
+			Timeout: o.Timeout / 2,
+		}).DialContext
+
+		tr.TLSHandshakeTimeout = o.Timeout / 2
+		tr.ResponseHeaderTimeout = o.Timeout / 2
+	}
+
+	return tr
 }
 
 func GetFreePort() (int, error) {
