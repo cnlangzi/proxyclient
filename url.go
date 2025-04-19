@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 type FuncParser func(u *url.URL) (URL, error)
@@ -87,8 +89,80 @@ func IsIP(s string) bool {
 	return net.ParseIP(s) != nil
 }
 
-var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+// Regex for standard domains and many non-standard TLDs including:
+// - Numeric TLDs (.0, .123)
+// - Single character TLDs (.x, .q)
+// - Hyphenated TLDs (.my-domain)
+// - Multiple levels (.co.jp, etc.)
+var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9-_]{1,}$`)
+
+func validateControlCharacters(s string) bool {
+	for _, r := range s {
+		if r < 0x20 || (r >= 0x7F && r <= 0x9F) {
+			return false
+		}
+	}
+	return true
+}
+
+func validateDirectionalText(s string) bool {
+	parts := strings.Split(s, ".")
+	for _, part := range parts {
+		if containsMixedDirectionalText(part) {
+			return false
+		}
+	}
+	return true
+}
+
+func convertIDN(s string) (string, error) {
+	return idna.ToASCII(s)
+}
 
 func IsDomain(s string) bool {
-	return regexDomain.MatchString(strings.ToLower(s))
+	lower := strings.ToLower(s)
+	// Fast ASCII check first
+	if regexDomain.MatchString(lower) {
+		return true
+	}
+
+	// Validate control characters
+	if !validateControlCharacters(s) {
+		return false
+	}
+
+	// Validate directional text consistency
+	if !validateDirectionalText(s) {
+		return false
+	}
+
+	// Convert and validate IDN
+	punycode, err := convertIDN(s)
+	if err != nil {
+		return false
+	}
+	return regexDomain.MatchString(strings.ToLower(punycode))
+}
+
+// containsMixedDirectionalText checks if a string contains both RTL and LTR characters
+// within the same domain label, which is typically invalid
+func containsMixedDirectionalText(s string) bool {
+	hasRTL := false
+	hasLTR := false
+
+	for _, r := range s {
+		// Arabic, Hebrew and other RTL script ranges
+		if (r >= 0x0590 && r <= 0x08FF) || (r >= 0xFB1D && r <= 0xFDFF) || (r >= 0xFE70 && r <= 0xFEFF) {
+			hasRTL = true
+		}
+		// Basic Latin letters (not digits or symbols)
+		if r >= 0x0041 && r <= 0x007A {
+			hasLTR = true
+		}
+		// If we have both directions in the same label, it's not valid
+		if hasRTL && hasLTR {
+			return true
+		}
+	}
+	return false
 }
