@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 type FuncParser func(u *url.URL) (URL, error)
@@ -87,8 +89,65 @@ func IsIP(s string) bool {
 	return net.ParseIP(s) != nil
 }
 
-var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+// Regex for standard domains and many non-standard TLDs including:
+// - Numeric TLDs (.0, .123)
+// - Single character TLDs (.x, .q)
+// - Hyphenated TLDs (.my-domain)
+// - Multiple levels (.co.jp, etc.)
+var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9-_]{1,}$`)
 
 func IsDomain(s string) bool {
-	return regexDomain.MatchString(strings.ToLower(s))
+	// First check if the domain is in ASCII format
+	if regexDomain.MatchString(strings.ToLower(s)) {
+		return true
+	}
+
+	// Additional validation for IDN domains
+	// Check for invalid control characters
+	for _, r := range s {
+		if r < 0x20 || (r >= 0x7F && r <= 0x9F) {
+			// Control characters are not allowed in domain names
+			return false
+		}
+	}
+
+	// Check for invalid mixed directional text within the same label
+	parts := strings.Split(s, ".")
+	for _, part := range parts {
+		if containsMixedDirectionalText(part) {
+			return false
+		}
+	}
+
+	// Try to handle IDN (Internationalized Domain Names)
+	punycode, err := idna.ToASCII(s)
+	if err != nil {
+		return false
+	}
+
+	// Check the Punycode version against the regex
+	return regexDomain.MatchString(strings.ToLower(punycode))
+}
+
+// containsMixedDirectionalText checks if a string contains both RTL and LTR characters
+// within the same domain label, which is typically invalid
+func containsMixedDirectionalText(s string) bool {
+	hasRTL := false
+	hasLTR := false
+
+	for _, r := range s {
+		// Arabic, Hebrew and other RTL script ranges
+		if (r >= 0x0590 && r <= 0x08FF) || (r >= 0xFB1D && r <= 0xFDFF) || (r >= 0xFE70 && r <= 0xFEFF) {
+			hasRTL = true
+		}
+		// Basic Latin letters (not digits or symbols)
+		if r >= 0x0041 && r <= 0x007A {
+			hasLTR = true
+		}
+		// If we have both directions in the same label, it's not valid
+		if hasRTL && hasLTR {
+			return true
+		}
+	}
+	return false
 }
