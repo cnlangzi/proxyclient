@@ -96,36 +96,51 @@ func IsIP(s string) bool {
 // - Multiple levels (.co.jp, etc.)
 var regexDomain = regexp.MustCompile(`^([a-zA-Z0-9](?:[a-zA-Z0-9-_]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9-_]{1,}$`)
 
-func IsDomain(s string) bool {
-	// First check if the domain is in ASCII format
-	if regexDomain.MatchString(strings.ToLower(s)) {
-		return true
-	}
-
-	// Additional validation for IDN domains
-	// Check for invalid control characters
+func validateControlCharacters(s string) bool {
 	for _, r := range s {
 		if r < 0x20 || (r >= 0x7F && r <= 0x9F) {
-			// Control characters are not allowed in domain names
 			return false
 		}
 	}
+	return true
+}
 
-	// Check for invalid mixed directional text within the same label
+func validateDirectionalText(s string) bool {
 	parts := strings.Split(s, ".")
 	for _, part := range parts {
 		if containsMixedDirectionalText(part) {
 			return false
 		}
 	}
+	return true
+}
 
-	// Try to handle IDN (Internationalized Domain Names)
-	punycode, err := idna.ToASCII(s)
-	if err != nil {
+func convertIDN(s string) (string, error) {
+	return idna.ToASCII(s)
+}
+
+func IsDomain(s string) bool {
+	lower := strings.ToLower(s)
+	// Fast ASCII check first
+	if regexDomain.MatchString(lower) {
+		return true
+	}
+
+	// Validate control characters
+	if !validateControlCharacters(s) {
 		return false
 	}
 
-	// Check the Punycode version against the regex
+	// Validate directional text consistency
+	if !validateDirectionalText(s) {
+		return false
+	}
+
+	// Convert and validate IDN
+	punycode, err := convertIDN(s)
+	if err != nil {
+		return false
+	}
 	return regexDomain.MatchString(strings.ToLower(punycode))
 }
 
