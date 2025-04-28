@@ -12,8 +12,8 @@ import (
 )
 
 func init() {
-	supportProxies["socks5"] = ProxySocks5
-	supportProxies["socks5h"] = ProxySocks5
+	supportProxies["socks5"] = ProxySocks4
+	supportProxies["socks5h"] = ProxySocks4
 	supportProxies["socks4"] = ProxySocks4
 	supportProxies["socks4a"] = ProxySocks4
 
