@@ -69,6 +69,8 @@ func ProxySocks4(u *url.URL, o *Options) (http.RoundTripper, error) {
 		return dialTLSContext(ctx, tr.DialContext, network, addr, tr.TLSClientConfig)
 	}
 
+	tr.Proxy = nil
+
 	return tr, nil
 }
 
