@@ -132,25 +132,25 @@ func SSRToXRay(u *url.URL, port int) ([]byte, int, error) {
 	// Create configuration based on Xray JSON format
 	config := &XRayConfig{
 		Log: &LogConfig{
-			Loglevel: "warning",
+			Loglevel: "error",
 		},
-		Inbounds: []Inbound{
-			{
-				Tag:      "socks-in",
-				Port:     port,
-				Listen:   "127.0.0.1",
-				Protocol: "socks",
-				Settings: &SocksSetting{
-					Auth: "noauth",
-					UDP:  true,
-					IP:   "127.0.0.1",
-				},
-				Sniffing: &Sniffing{
-					Enabled:      true,
-					DestOverride: []string{"http", "tls"},
-				},
-			},
-		},
+		// Inbounds: []Inbound{
+		// 	{
+		// 		Tag:      "socks-in",
+		// 		Port:     port,
+		// 		Listen:   "127.0.0.1",
+		// 		Protocol: "socks",
+		// 		Settings: &SocksSetting{
+		// 			Auth: "noauth",
+		// 			UDP:  true,
+		// 			IP:   "127.0.0.1",
+		// 		},
+		// 		Sniffing: &Sniffing{
+		// 			Enabled:      true,
+		// 			DestOverride: []string{"http", "tls"},
+		// 		},
+		// 	},
+		// },
 		Outbounds: []Outbound{
 			{
 				Tag:      "shadowsocks-out",
@@ -211,6 +211,6 @@ func StartSSR(u *url.URL, port int) (*core.Instance, int, error) {
 	// Register the running server
 	setServer(ssrURL, instance, port)
 
-	fmt.Printf("SSR proxy started on socks5://127.0.0.1:%d\n", port)
+	// fmt.Printf("SSR proxy started on socks5://127.0.0.1:%d\n", port)
 	return instance, port, nil
 }

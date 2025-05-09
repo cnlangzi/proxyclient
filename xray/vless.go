@@ -153,25 +153,25 @@ func VlessToXRay(vu *VlessURL, port int) ([]byte, int, error) {
 	// Create complete configuration
 	config := &XRayConfig{
 		Log: &LogConfig{
-			Loglevel: "warning",
+			Loglevel: "error",
 		},
-		Inbounds: []Inbound{
-			{
-				Tag:      "socks-in",
-				Port:     port,
-				Listen:   "127.0.0.1",
-				Protocol: "socks",
-				Settings: &SocksSetting{
-					Auth: "noauth",
-					UDP:  true,
-					IP:   "127.0.0.1",
-				},
-				Sniffing: &Sniffing{
-					Enabled:      true,
-					DestOverride: []string{"http", "tls"},
-				},
-			},
-		},
+		// Inbounds: []Inbound{
+		// 	{
+		// 		Tag:      "socks-in",
+		// 		Port:     port,
+		// 		Listen:   "127.0.0.1",
+		// 		Protocol: "socks",
+		// 		Settings: &SocksSetting{
+		// 			Auth: "noauth",
+		// 			UDP:  true,
+		// 			IP:   "127.0.0.1",
+		// 		},
+		// 		Sniffing: &Sniffing{
+		// 			Enabled:      true,
+		// 			DestOverride: []string{"http", "tls"},
+		// 		},
+		// 	},
+		// },
 		Outbounds: []Outbound{
 			{
 				Tag:            "vless-out",
@@ -239,6 +239,6 @@ func StartVless(u *url.URL, port int) (*core.Instance, int, error) {
 	// Register the running server
 	setServer(vlessURL, instance, port)
 
-	fmt.Printf("VLESS proxy started on socks5://127.0.0.1:%d\n", port)
+	// fmt.Printf("VLESS proxy started on socks5://127.0.0.1:%d\n", port)
 	return instance, port, nil
 }
