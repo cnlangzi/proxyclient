@@ -50,7 +50,9 @@ func createCompleteVmessConfig(vmess *VmessConfig, port int) *XRayConfig {
 
 	return &XRayConfig{
 		Log: &LogConfig{
-			Loglevel: "error",
+			Access: "none", // Disable access logs
+			// Error:    "none", // Disable error log file (Loglevel controls console error log verbosity)
+			Loglevel: "error", // Set to "none" to disable console error logs, or "error" for errors only
 		},
 		// Inbounds: []Inbound{
 		// 	{

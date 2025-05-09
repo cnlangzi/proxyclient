@@ -153,6 +153,7 @@ func VlessToXRay(vu *VlessURL, port int) ([]byte, int, error) {
 	// Create complete configuration
 	config := &XRayConfig{
 		Log: &LogConfig{
+			Access:   "none",
 			Loglevel: "error",
 		},
 		// Inbounds: []Inbound{

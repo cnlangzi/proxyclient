@@ -132,6 +132,7 @@ func SSRToXRay(u *url.URL, port int) ([]byte, int, error) {
 	// Create configuration based on Xray JSON format
 	config := &XRayConfig{
 		Log: &LogConfig{
+			Access:   "none",
 			Loglevel: "error",
 		},
 		// Inbounds: []Inbound{
