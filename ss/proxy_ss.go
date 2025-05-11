@@ -18,19 +18,19 @@ func init() {
 	proxyclient.RegisterProxy("ss", DialSS)
 }
 
-// ProxySS creates a RoundTripper for Shadowsocks proxy
-func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
-	// Start Shadowsocks instance
-	port, err := StartSS(u, 0)
-	if err != nil {
-		return nil, err
-	}
+// // ProxySS creates a RoundTripper for Shadowsocks proxy
+// func ProxySS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
+// 	// Start Shadowsocks instance
+// 	port, err := StartSS(u, 0)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// Get SOCKS5 proxy URL
-	proxyURL, _ := url.Parse(fmt.Sprintf("socks5://127.0.0.1:%d", port))
+// 	// Get SOCKS5 proxy URL
+// 	proxyURL, _ := url.Parse(fmt.Sprintf("socks5://127.0.0.1:%d", port))
 
-	return proxyclient.ProxySocks5(proxyURL, o)
-}
+// 	return proxyclient.ProxySocks5(proxyURL, o)
+// }
 
 func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
@@ -48,7 +48,6 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	tr := proxyclient.CreateTransport(o)
 
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-
 		serverAddr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
 		conn, err := net.Dial("tcp", serverAddr)
 		if err != nil {
@@ -58,16 +57,22 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 		destination := metadata.ParseSocksaddr(addr)
 
 		ssConn, err := proxyclient.WithRecover(func() (net.Conn, error) {
-			return m.DialConn(conn, destination)
+			conn, err := m.DialConn(conn, destination)
+			if err != nil {
+				return nil, err
+			}
+
+			return proxyclient.SetDeadline(conn, o.Timeout, tr.DisableKeepAlives)
 		})
 
 		if ssConn == nil {
+			conn.Close() // nolint: errcheck
 			log.Printf("ss: panic on %s \n", su.Raw().String())
 			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
 		}
 
 		if err != nil {
-			conn.Close()
+			conn.Close() // nolint: errcheck
 			log.Printf("ss: panic on %s \n", su.Raw().String())
 			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
 		}

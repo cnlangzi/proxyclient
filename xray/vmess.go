@@ -50,26 +50,28 @@ func createCompleteVmessConfig(vmess *VmessConfig, port int) *XRayConfig {
 
 	return &XRayConfig{
 		Log: &LogConfig{
-			Loglevel: "warning",
+			Access: "none", // Disable access logs
+			// Error:    "none", // Disable error log file (Loglevel controls console error log verbosity)
+			Loglevel: "error", // Set to "none" to disable console error logs, or "error" for errors only
 		},
-		Inbounds: []Inbound{
-			{
-				Tag:      "socks-in",
-				Port:     port,
-				Listen:   "127.0.0.1",
-				Protocol: "socks",
-				Settings: &SocksSetting{
-					Auth:      "noauth",
-					UDP:       true,
-					IP:        "127.0.0.1",
-					UserLevel: 0,
-				},
-				Sniffing: &Sniffing{
-					Enabled:      true,
-					DestOverride: []string{"http", "tls"},
-				},
-			},
-		},
+		// Inbounds: []Inbound{
+		// 	{
+		// 		Tag:      "socks-in",
+		// 		Port:     port,
+		// 		Listen:   "127.0.0.1",
+		// 		Protocol: "socks",
+		// 		Settings: &SocksSetting{
+		// 			Auth:      "noauth",
+		// 			UDP:       true,
+		// 			IP:        "127.0.0.1",
+		// 			UserLevel: 0,
+		// 		},
+		// 		Sniffing: &Sniffing{
+		// 			Enabled:      true,
+		// 			DestOverride: []string{"http", "tls"},
+		// 		},
+		// 	},
+		// },
 		Outbounds: []Outbound{
 			{
 				Tag:      "vmess-out",
