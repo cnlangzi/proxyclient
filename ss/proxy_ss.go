@@ -63,7 +63,12 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 				return nil, err
 			}
 
-			return conn, conn.SetDeadline(time.Now().Add(o.Timeout))
+			err = conn.SetDeadline(time.Now().Add(o.Timeout))
+			if err != nil {
+				conn.Close() // Ensure the connection is closed to avoid resource leaks
+				return nil, err
+			}
+			return conn, nil
 		})
 
 		if ssConn == nil {
