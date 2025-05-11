@@ -31,8 +31,7 @@ func CreateTransport(o *Options) *http.Transport {
 
 	if o.Timeout > 0 {
 		tr.DialContext = (&net.Dialer{
-			Timeout:  o.Timeout / 2,
-			Deadline: time.Now().Add(o.Timeout),
+			Timeout: o.Timeout / 2,
 		}).DialContext
 
 		tr.TLSHandshakeTimeout = o.Timeout / 2

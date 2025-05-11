@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cnlangzi/proxyclient"
 )
@@ -38,7 +39,12 @@ func DialSSR(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Create a transport that uses our custom dialer
 	tr := proxyclient.CreateTransport(o)
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return dialContext(ctx, instance, network, addr)
+		conn, err := dialContext(ctx, instance, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		return conn, conn.SetDeadline(time.Now().Add(o.Timeout))
 	}
 	tr.Proxy = nil
 

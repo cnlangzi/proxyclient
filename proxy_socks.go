@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"golang.org/x/net/proxy"
 	"h12.io/socks"
@@ -66,7 +67,12 @@ func ProxySocks4(u *url.URL, o *Options) (http.RoundTripper, error) {
 		return socks.Dial(proxyURL)(network, addr)
 	}
 	tr.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return dialTLSContext(ctx, tr.DialContext, network, addr, tr.TLSClientConfig)
+		conn, err := dialTLSContext(ctx, tr.DialContext, network, addr, tr.TLSClientConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		return conn, conn.SetDeadline(time.Now().Add(o.Timeout))
 	}
 
 	tr.Proxy = nil
