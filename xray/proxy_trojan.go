@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/cnlangzi/proxyclient"
 )
@@ -44,12 +43,7 @@ func DialTrojan(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 			return nil, err
 		}
 
-		err = conn.SetDeadline(time.Now().Add(o.Timeout))
-		if err != nil {
-			conn.Close() // Ensure the connection is closed to avoid resource leaks
-			return nil, err
-		}
-		return conn, nil
+		return proxyclient.SetDeadline(conn, o.Timeout, tr.DisableKeepAlives)
 	}
 	tr.Proxy = nil
 

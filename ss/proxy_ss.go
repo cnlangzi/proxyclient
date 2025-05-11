@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/cnlangzi/proxyclient"
 	"github.com/sagernet/sing/common/metadata"
@@ -63,12 +62,7 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 				return nil, err
 			}
 
-			err = conn.SetDeadline(time.Now().Add(o.Timeout))
-			if err != nil {
-				conn.Close() // Ensure the connection is closed to avoid resource leaks
-				return nil, err
-			}
-			return conn, nil
+			return proxyclient.SetDeadline(conn, o.Timeout, tr.DisableKeepAlives)
 		})
 
 		if ssConn == nil {

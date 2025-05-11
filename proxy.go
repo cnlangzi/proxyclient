@@ -41,6 +41,18 @@ func CreateTransport(o *Options) *http.Transport {
 	return tr
 }
 
+func SetDeadline(conn net.Conn, timeout time.Duration, disableKeepAlives bool) (net.Conn, error) {
+	if timeout > 0 && disableKeepAlives {
+		err := conn.SetDeadline(time.Now().Add(timeout))
+		if err != nil {
+			// Ensure the connection is closed to avoid resource leaks
+			conn.Close() // nolint: errcheck
+			return nil, fmt.Errorf("failed to set deadline: %w", err)
+		}
+	}
+	return conn, nil
+}
+
 func GetFreePort() (int, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
