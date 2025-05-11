@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	proxyclient.RegisterProxy("vless", ProxyVless)
+	proxyclient.RegisterProxy("vless", DialVless)
 }
 
 // VlessToXRay converts VLESS URL to Xray JSON configuration
