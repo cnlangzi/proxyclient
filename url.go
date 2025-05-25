@@ -92,7 +92,7 @@ func IsIP(s string) bool {
 
 	var mustIPv6 bool
 
-	if len(s) > 1 && s[0] == '[' && s[len(s)-1] == ']' {
+	if len(s) >= 2 && strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
 		s = s[1 : len(s)-1]
 		mustIPv6 = true
 	}
