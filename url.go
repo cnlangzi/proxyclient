@@ -86,7 +86,28 @@ func IsHost(s string) bool {
 }
 
 func IsIP(s string) bool {
-	return net.ParseIP(s) != nil
+	if s == "" {
+		return false
+	}
+
+	var mustIPv6 bool
+
+	if len(s) >= 2 && strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
+		s = s[1 : len(s)-1]
+		mustIPv6 = true
+	}
+
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return false
+	}
+
+	// If brackets were present, ensure it's actually IPv6
+	if mustIPv6 && ip.To4() != nil {
+		return false
+	}
+
+	return true
 }
 
 // Regex for standard domains and many non-standard TLDs including:
