@@ -86,6 +86,7 @@ func IsHost(s string) bool {
 }
 
 func IsIP(s string) bool {
+	s = strings.TrimSuffix(strings.TrimPrefix(s, "["), "]")
 	return net.ParseIP(s) != nil
 }
 
