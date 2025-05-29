@@ -32,6 +32,7 @@ type TrojanConfig struct {
 	Fingerprint   string
 	ServiceName   string
 	AllowInsecure bool // Controls whether to allow insecure TLS connections
+	Remark        string
 
 	raw *url.URL `json:"-"`
 }
@@ -68,6 +69,10 @@ func (v *TrojanURL) Protocol() string {
 	return "trojan"
 }
 
+func (v *TrojanURL) Name() string {
+	return v.Config.Remark
+}
+
 // ParseTrojanURL parses Trojan URL
 // trojan://password@host:port?security=tls&type=tcp&sni=example.com...
 func ParseTrojanURL(u *url.URL) (*TrojanURL, error) {
@@ -97,6 +102,7 @@ func ParseTrojanURL(u *url.URL) (*TrojanURL, error) {
 		Security:      "tls", // Trojan defaults to TLS
 		Type:          "tcp", // Default transport type
 		AllowInsecure: true,
+		Remark:        u.Fragment,
 	}
 
 	// Parse query parameters

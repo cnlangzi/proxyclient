@@ -36,6 +36,7 @@ type VlessConfig struct {
 	SpiderX       string
 	ServiceName   string
 	AllowInsecure bool // Controls whether to allow insecure TLS connections
+	Remark        string
 
 	raw *url.URL `json:"-"`
 }
@@ -72,6 +73,10 @@ func (v *VlessURL) Protocol() string {
 	return "vless"
 }
 
+func (v *VlessURL) Name() string {
+	return v.Config.Remark
+}
+
 // ParseVlessURL parses VLESS URL
 // vless://uuid@host:port?encryption=none&type=tcp&security=tls&sni=example.com...
 func ParseVlessURL(u *url.URL) (*VlessURL, error) {
@@ -101,6 +106,7 @@ func ParseVlessURL(u *url.URL) (*VlessURL, error) {
 		Type:          "tcp",  // Default transport type
 		AllowInsecure: true,
 		raw:           u,
+		Remark:        u.Fragment,
 	}
 
 	// Parse query parameters

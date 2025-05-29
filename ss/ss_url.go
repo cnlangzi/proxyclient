@@ -61,6 +61,10 @@ func (v *URL) Password() string {
 	return ""
 }
 
+func (v *URL) Name() string {
+	return v.Config.Name
+}
+
 // ParseSSURL parses a Shadowsocks URL
 func ParseSSURL(u *url.URL) (*URL, error) {
 

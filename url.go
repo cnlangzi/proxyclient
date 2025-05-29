@@ -25,6 +25,7 @@ type URL interface {
 	Port() string
 	User() string
 	Password() string
+	Name() string
 }
 
 type stdURL struct {
@@ -61,6 +62,10 @@ func (u *stdURL) Password() string {
 	}
 	passwd, _ := u.URL.User.Password()
 	return passwd
+}
+
+func (u *stdURL) Name() string {
+	return u.URL.Fragment
 }
 
 func ParseURL(u string) (URL, error) {

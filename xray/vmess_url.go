@@ -73,7 +73,11 @@ func (v *VmessURL) User() string {
 }
 
 func (v *VmessURL) Password() string {
-	return ""
+	return "" // VMess does not use password in the traditional sense
+}
+
+func (v *VmessURL) Name() string {
+	return v.Config.PS
 }
 
 func ParseVmessURL(u *url.URL) (*VmessURL, error) {
