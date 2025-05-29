@@ -64,6 +64,10 @@ func (v *SSRURL) Password() string {
 	return v.Config.Password
 }
 
+func (v *SSRURL) Name() string {
+	return v.Config.Name
+}
+
 func ParseSSRURL(u *url.URL) (*SSRURL, error) {
 
 	ssrURL := u.String()
