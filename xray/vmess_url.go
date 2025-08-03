@@ -49,18 +49,30 @@ type VmessURL struct {
 }
 
 func (v *VmessURL) Raw() *url.URL {
+	if v.Config == nil {
+		return nil
+	}
 	return v.Config.raw
 }
 
 func (v *VmessURL) Opaque() string {
+	if v.Config == nil || v.Config.raw == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "vmess://")
 }
 
 func (v *VmessURL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Add
 }
 
 func (v *VmessURL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port.Value())
 }
 
@@ -69,6 +81,9 @@ func (v *VmessURL) Protocol() string {
 }
 
 func (v *VmessURL) User() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.ID
 }
 
@@ -77,6 +92,9 @@ func (v *VmessURL) Password() string {
 }
 
 func (v *VmessURL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.PS
 }
 
