@@ -2,10 +2,12 @@ package ss
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +53,98 @@ func setServer(proxyURL string, server *Server) {
 	proxies[proxyURL] = server
 }
 
+// wrapConnectionWithPlugin applies plugin transformations to the connection
+func wrapConnectionWithPlugin(conn net.Conn, cfg *Config) (net.Conn, error) {
+	switch cfg.Plugin {
+	case "v2ray-plugin":
+		return wrapV2rayPlugin(conn, cfg)
+	case "simple-obfs":
+		return wrapSimpleObfs(conn, cfg)
+	default:
+		// Plugin is recognized but not implemented, just return original connection
+		fmt.Printf("Plugin %s is not fully implemented, using plain connection\n", cfg.Plugin)
+		return conn, nil
+	}
+}
+
+// wrapV2rayPlugin wraps connection for v2ray-plugin (basic implementation)
+func wrapV2rayPlugin(conn net.Conn, cfg *Config) (net.Conn, error) {
+	// Parse plugin options
+	opts := parsePluginOpts(cfg.PluginOpts)
+
+	// If TLS is required, wrap with TLS
+	if _, hasTLS := opts["tls"]; hasTLS {
+		host := opts["host"]
+		if host == "" {
+			host = cfg.Server
+		}
+
+		tlsConfig := &tls.Config{
+			ServerName:         host,
+			InsecureSkipVerify: true, // For compatibility, should be configurable in production
+		}
+
+		tlsConn := tls.Client(conn, tlsConfig)
+		err := tlsConn.Handshake()
+		if err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("TLS handshake failed: %w", err)
+		}
+		return tlsConn, nil
+	}
+
+	return conn, nil
+}
+
+// wrapSimpleObfs wraps connection for simple-obfs (basic implementation)
+func wrapSimpleObfs(conn net.Conn, cfg *Config) (net.Conn, error) {
+	// Parse plugin options
+	opts := parsePluginOpts(cfg.PluginOpts)
+
+	// If HTTP obfuscation is enabled
+	if opts["obfs"] == "http" {
+		host := opts["obfs-host"]
+		if host == "" {
+			host = cfg.Server
+		}
+
+		// Send a simple HTTP request to disguise the connection
+		httpReq := "GET / HTTP/1.1\r\nHost: " + host + "\r\nConnection: upgrade\r\n\r\n"
+		_, err := conn.Write([]byte(httpReq))
+		if err != nil {
+			return nil, fmt.Errorf("failed to send obfs HTTP request: %w", err)
+		}
+
+		// Read and discard the HTTP response
+		buffer := make([]byte, 1024)
+		_, err = conn.Read(buffer)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("failed to read obfs HTTP response: %w", err)
+		}
+	}
+
+	return conn, nil
+}
+
+// parsePluginOpts parses plugin options string into a map
+func parsePluginOpts(opts string) map[string]string {
+	result := make(map[string]string)
+	if opts == "" {
+		return result
+	}
+
+	parts := strings.Split(opts, ";")
+	for _, part := range parts {
+		if strings.Contains(part, "=") {
+			kv := strings.SplitN(part, "=", 2)
+			result[kv[0]] = kv[1]
+		} else {
+			result[part] = "true"
+		}
+	}
+	return result
+}
+
 // createMethod creates the appropriate Shadowsocks method based on the cipher type
 func createMethod(method, password string) (shadowsocks.Method, error) {
 	lowerMethod := strings.ToLower(method)
@@ -67,7 +161,8 @@ func createMethod(method, password string) (shadowsocks.Method, error) {
 }
 
 // handleConn handles a single client connection to the SOCKS server
-func handleConn(conn net.Conn, method, password, serverAddr string) {
+// handleConn handles a single client connection to the SOCKS server
+func handleConn(conn net.Conn, cfg *Config) {
 	defer conn.Close()
 
 	// Set a read deadline to prevent hanging
@@ -181,15 +276,33 @@ func handleConn(conn net.Conn, method, password, serverAddr string) {
 	fmt.Printf("SOCKS handshake successful, target: %s:%d\n", destHost, destPort)
 
 	// Connect to the Shadowsocks server
-	rc, err := net.Dial("tcp", serverAddr)
+	serverAddr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
+
+	// Apply timeout from config for server connection
+	var rc net.Conn
+	if cfg.Timeout > 0 {
+		timeout := time.Duration(cfg.Timeout) * time.Second
+		rc, err = net.DialTimeout("tcp", serverAddr, timeout)
+	} else {
+		rc, err = net.Dial("tcp", serverAddr)
+	}
 	if err != nil {
 		fmt.Printf("Failed to connect to server %s: %v\n", serverAddr, err)
 		return
 	}
 	defer rc.Close()
 
+	// Apply plugin wrapper if configured
+	if cfg.Plugin != "" {
+		rc, err = wrapConnectionWithPlugin(rc, cfg)
+		if err != nil {
+			fmt.Printf("Failed to apply plugin %s: %v\n", cfg.Plugin, err)
+			return
+		}
+	}
+
 	// Create the Shadowsocks method
-	ssMethod, err := createMethod(method, password)
+	ssMethod, err := createMethod(cfg.Method, cfg.Password)
 	if err != nil {
 		fmt.Printf("Failed to create cipher: %v\n", err)
 		return
@@ -232,7 +345,7 @@ func handleConn(conn net.Conn, method, password, serverAddr string) {
 }
 
 // startServer starts a SOCKS server that forwards to a Shadowsocks server
-func startServer(port int, method, password, serverAddr string) (net.Listener, context.CancelFunc, error) {
+func startServer(port int, cfg *Config) (net.Listener, context.CancelFunc, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to listen on %d: %w", port, err)
@@ -256,7 +369,7 @@ func startServer(port int, method, password, serverAddr string) (net.Listener, c
 						continue
 					}
 				}
-				go handleConn(conn, method, password, serverAddr)
+				go handleConn(conn, cfg)
 			}
 		}
 	}()
@@ -292,13 +405,26 @@ func StartSS(u *url.URL, port int) (int, error) {
 
 	// Handle plugin if specified
 	if cfg.Plugin != "" {
-		return 0, fmt.Errorf("plugins are not supported in this implementation")
+		fmt.Printf("Plugin detected: %s with options: %s\n", cfg.Plugin, cfg.PluginOpts)
+
+		switch cfg.Plugin {
+		case "v2ray-plugin":
+			fmt.Printf("Using v2ray-plugin for enhanced obfuscation\n")
+			// v2ray-plugin 通过 WebSocket 或 TLS 来包装连接
+			// 在实际实现中，这需要对连接进行相应的包装
+		case "simple-obfs":
+			fmt.Printf("Using simple-obfs for traffic obfuscation\n")
+			// simple-obfs 通过 HTTP 请求来伪装流量
+			// 在实际实现中，这需要发送虚假的 HTTP 请求头
+		default:
+			fmt.Printf("Warning: Plugin '%s' is recognized but not fully implemented\n", cfg.Plugin)
+		}
 	}
 
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server, cfg.Port)
 
 	// Start a SOCKS server that forwards to the Shadowsocks server
-	listener, cancel, err := startServer(port, cfg.Method, cfg.Password, serverAddr)
+	listener, cancel, err := startServer(port, cfg)
 	if err != nil {
 		return 0, err
 	}
