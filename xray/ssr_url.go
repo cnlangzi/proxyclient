@@ -37,18 +37,30 @@ type SSRURL struct {
 }
 
 func (v *SSRURL) Raw() *url.URL {
+	if v.Config == nil {
+		return nil
+	}
 	return v.Config.raw
 }
 
 func (v *SSRURL) Opaque() string {
+	if v.Config == nil || v.Config.raw == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "ssr://")
 }
 
 func (v *SSRURL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Server
 }
 
 func (v *SSRURL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port)
 }
 
@@ -61,10 +73,16 @@ func (v *SSRURL) User() string {
 }
 
 func (v *SSRURL) Password() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Password
 }
 
 func (v *SSRURL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Name
 }
 
