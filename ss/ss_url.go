@@ -34,18 +34,30 @@ type URL struct {
 }
 
 func (v *URL) Raw() *url.URL {
+	if v.Config == nil {
+		return nil
+	}
 	return v.Config.raw
 }
 
 func (v *URL) Opaque() string {
+	if v.Config == nil || v.Config.raw == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "ss://")
 }
 
 func (v *URL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Server
 }
 
 func (v *URL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port)
 }
 
@@ -62,6 +74,9 @@ func (v *URL) Password() string {
 }
 
 func (v *URL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Name
 }
 
