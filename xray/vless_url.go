@@ -46,22 +46,37 @@ type VlessURL struct {
 }
 
 func (v *VlessURL) Raw() *url.URL {
+	if v.Config == nil {
+		return nil
+	}
 	return v.Config.raw
 }
 
 func (v *VlessURL) Opaque() string {
+	if v.Config == nil || v.Config.raw == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "vless://")
 }
 
 func (v *VlessURL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Address
 }
 
 func (v *VlessURL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port)
 }
 
 func (v *VlessURL) User() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.UUID
 }
 
@@ -74,6 +89,9 @@ func (v *VlessURL) Protocol() string {
 }
 
 func (v *VlessURL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Remark
 }
 

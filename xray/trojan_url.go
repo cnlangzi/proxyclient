@@ -42,18 +42,31 @@ type TrojanURL struct {
 }
 
 func (v *TrojanURL) Raw() *url.URL {
+	if v == nil {
+		return nil
+	}
+
 	return v.Config.raw
 }
 
 func (v *TrojanURL) Opaque() string {
+	if v.Config == nil || v.Config.raw == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "trojan://")
 }
 
 func (v *TrojanURL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Address
 }
 
 func (v *TrojanURL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port)
 }
 
@@ -62,6 +75,9 @@ func (v *TrojanURL) User() string {
 }
 
 func (v *TrojanURL) Password() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Password
 }
 
@@ -70,6 +86,9 @@ func (v *TrojanURL) Protocol() string {
 }
 
 func (v *TrojanURL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Remark
 }
 
