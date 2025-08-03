@@ -26,6 +26,8 @@ type Config struct {
 	Plugin     string
 	PluginOpts string
 	Name       string
+	Timeout    int
+	FastOpen   bool
 	raw        *url.URL `json:"-"`
 }
 
@@ -34,18 +36,30 @@ type URL struct {
 }
 
 func (v *URL) Raw() *url.URL {
+	if v.Config == nil {
+		return nil
+	}
 	return v.Config.raw
 }
 
 func (v *URL) Opaque() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strings.TrimPrefix(v.Config.raw.String(), "ss://")
 }
 
 func (v *URL) Host() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Server
 }
 
 func (v *URL) Port() string {
+	if v.Config == nil {
+		return ""
+	}
 	return strconv.Itoa(v.Config.Port)
 }
 
@@ -62,6 +76,9 @@ func (v *URL) Password() string {
 }
 
 func (v *URL) Name() string {
+	if v.Config == nil {
+		return ""
+	}
 	return v.Config.Name
 }
 
@@ -83,6 +100,8 @@ func ParseSSURL(u *url.URL) (*URL, error) {
 	// Check if the URL is using legacy format or SIP002
 	var method, password, server, port string
 	var plugin, pluginOpts string
+	var timeout int = 30      // Default timeout of 30 seconds
+	var fastopen bool = false // Default FastOpen disabled
 
 	if strings.Contains(encodedPart, "@") {
 		// SIP002 format
@@ -128,6 +147,10 @@ func ParseSSURL(u *url.URL) (*URL, error) {
 				pluginOpts = pluginParts[1]
 			}
 		}
+
+		timeout, _ = strconv.Atoi(params.Get("timeout"))
+		fastopen, _ = strconv.ParseBool(params.Get("fast-open"))
+
 	} else {
 		// Legacy format - base64 encoded
 		decoded, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(encodedPart)
@@ -157,6 +180,7 @@ func ParseSSURL(u *url.URL) (*URL, error) {
 		}
 		server = serverParts[0]
 		port = serverParts[1]
+
 	}
 
 	portInt, err := strconv.Atoi(port)
@@ -172,6 +196,9 @@ func ParseSSURL(u *url.URL) (*URL, error) {
 		Plugin:     plugin,
 		PluginOpts: pluginOpts,
 		Name:       name,
+
+		Timeout:  timeout,
+		FastOpen: fastopen,
 
 		raw: u,
 	}
