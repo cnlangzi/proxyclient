@@ -6,7 +6,7 @@ require (
 	github.com/sagernet/sing v0.6.11
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.10.0
-	github.com/xtls/xray-core v1.250726.0
+	github.com/xtls/xray-core v1.250803.0
 	golang.org/x/net v0.42.0
 	h12.io/socks v1.0.3
 )
