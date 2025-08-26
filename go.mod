@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/sagernet/sing v0.7.5
 	github.com/sagernet/sing-shadowsocks v0.2.8
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	github.com/xtls/xray-core v1.250803.0
 	golang.org/x/net v0.43.0
 	h12.io/socks v1.0.3
