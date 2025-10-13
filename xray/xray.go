@@ -104,7 +104,7 @@ func Close(proxyURL string) {
 
 	i, ok := servers[proxyURL]
 	if ok {
-		i.Instance.Close()
+		i.Instance.Close() //nolint: errcheck
 		delete(servers, proxyURL)
 	}
 }
@@ -114,7 +114,7 @@ func CloseAll() {
 	defer mu.Unlock()
 
 	for url, server := range servers {
-		server.Instance.Close()
+		server.Instance.Close() //nolint: errcheck
 		delete(servers, url)
 	}
 }

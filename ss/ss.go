@@ -68,7 +68,7 @@ func createMethod(method, password string) (shadowsocks.Method, error) {
 
 // handleConn handles a single client connection to the SOCKS server
 func handleConn(conn net.Conn, method, password, serverAddr string) {
-	defer conn.Close()
+	defer conn.Close() //nolint: errcheck
 
 	// Set a read deadline to prevent hanging
 	conn.SetReadDeadline(time.Now().Add(30 * time.Second)) // nolint:errcheck
@@ -186,7 +186,7 @@ func handleConn(conn net.Conn, method, password, serverAddr string) {
 		fmt.Printf("Failed to connect to server %s: %v\n", serverAddr, err)
 		return
 	}
-	defer rc.Close()
+	defer rc.Close() //nolint: errcheck
 
 	// Create the Shadowsocks method
 	ssMethod, err := createMethod(method, password)
@@ -214,7 +214,7 @@ func handleConn(conn net.Conn, method, password, serverAddr string) {
 	go func() {
 		_, err := io.Copy(ssConn, conn)
 		done <- err
-		ssConn.Close()
+		ssConn.Close() //nolint: errcheck
 		fmt.Printf("Client to server copy finished for %s:%d, err: %v\n", destHost, destPort, err)
 	}()
 
@@ -329,7 +329,7 @@ func Close(proxyURL string) {
 			proxy.Cancel()
 		}
 		if proxy.Listener != nil {
-			proxy.Listener.Close()
+			proxy.Listener.Close() //nolint: errcheck
 		}
 		delete(proxies, proxyURL)
 	}

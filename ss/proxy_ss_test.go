@@ -42,7 +42,7 @@ func TestProxySS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to make HTTP request: %v", err)
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Expected status OK for %s, got %s", testURL, resp.Status)
@@ -63,7 +63,7 @@ func TestProxySS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to make HTTPS request: %v", err)
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Expected status OK for %s, got %s", testURL, resp.Status)

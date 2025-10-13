@@ -29,8 +29,8 @@ func handleTunneling(w http.ResponseWriter, r *http.Request) {
 	go transfer(client_conn, dest_conn)
 }
 func transfer(destination io.WriteCloser, source io.ReadCloser) {
-	defer destination.Close()
-	defer source.Close()
+	defer destination.Close()    //nolint: errcheck
+	defer source.Close()         //nolint: errcheck
 	io.Copy(destination, source) // nolint: errcheck
 }
 func handleHTTP(w http.ResponseWriter, req *http.Request) {
@@ -39,7 +39,7 @@ func handleHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint: errcheck
 	copyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body) // nolint: errcheck
@@ -54,7 +54,7 @@ func copyHeader(dst, src http.Header) {
 
 // Simplified SOCKS4 handler for testing
 func handleSocks4(conn net.Conn, t *testing.T) {
-	defer conn.Close()
+	defer conn.Close() //nolint: errcheck
 
 	// Read SOCKS4 request
 	buf := make([]byte, 128)
@@ -99,7 +99,7 @@ func handleSocks4(conn net.Conn, t *testing.T) {
 
 // Simplified SOCKS5 handler for testing
 func handleSocks5(conn net.Conn, t *testing.T) {
-	defer conn.Close()
+	defer conn.Close() //nolint: errcheck
 
 	// 1. Read auth methods negotiation
 	buf := make([]byte, 2)
