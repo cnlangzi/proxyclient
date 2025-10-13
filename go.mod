@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/sagernet/sing v0.7.12
-	github.com/sagernet/sing-shadowsocks v0.2.8
+	github.com/sagernet/sing-shadowsocks v0.2.9
 	github.com/stretchr/testify v1.11.1
 	github.com/xtls/xray-core v1.250911.0
 	golang.org/x/net v0.46.0
