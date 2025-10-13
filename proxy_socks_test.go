@@ -14,7 +14,7 @@ import (
 func TestProxySocks(t *testing.T) {
 	// Create a test server that we'll try to access through the proxy
 	targetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello from target server")
+		fmt.Fprintf(w, "Hello from target server") //nolint: errcheck
 	}))
 	defer targetServer.Close()
 
@@ -35,7 +35,7 @@ func TestProxySocks(t *testing.T) {
 				go handleSocks4(conn, t)
 			}
 		}()
-		defer listener.Close()
+		defer listener.Close() //nolint: errcheck
 
 		// Create proxy URL (socks4://127.0.0.1:port)
 		proxyURL := fmt.Sprintf("socks4://%s", listener.Addr().String())
@@ -47,7 +47,7 @@ func TestProxySocks(t *testing.T) {
 		// Make request to target server
 		resp, err := client.Get(targetServer.URL)
 		require.NoError(t, err, "Failed to make request through SOCKS4 proxy")
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		// Verify proxy was used
 		require.True(t, proxyWasUsed, "SOCKS4 proxy was not used")
@@ -79,7 +79,7 @@ func TestProxySocks(t *testing.T) {
 				go handleSocks5(conn, t)
 			}
 		}()
-		defer listener.Close()
+		defer listener.Close() //nolint: errcheck
 
 		// Create proxy URL (socks5://127.0.0.1:port)
 		proxyURL := fmt.Sprintf("socks5://%s", listener.Addr().String())
@@ -91,7 +91,7 @@ func TestProxySocks(t *testing.T) {
 		// Make request to target server
 		resp, err := client.Get(targetServer.URL)
 		require.NoError(t, err, "Failed to make request through SOCKS5 proxy")
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		// Verify proxy was used
 		require.True(t, proxyWasUsed, "SOCKS5 proxy was not used")

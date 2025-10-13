@@ -74,7 +74,7 @@ func ProxySocks4(u *url.URL, o *Options) (http.RoundTripper, error) {
 
 		err = conn.SetDeadline(time.Now().Add(o.Timeout))
 		if err != nil {
-			conn.Close() // Ensure the connection is closed to avoid resource leaks
+			conn.Close() //nolint: errcheck
 			return nil, err
 		}
 		return conn, nil
@@ -95,7 +95,7 @@ func dialTLSContext(ctx context.Context, dialer Dialer, network, addr string, tl
 
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		conn.Close()
+		conn.Close() //nolint: errcheck
 		return nil, err
 	}
 
@@ -107,7 +107,7 @@ func dialTLSContext(ctx context.Context, dialer Dialer, network, addr string, tl
 
 	tlsConn := tls.Client(conn, tlsConfig)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
-		tlsConn.Close()
+		tlsConn.Close() //nolint: errcheck
 		return nil, err
 	}
 	return tlsConn, nil

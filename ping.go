@@ -10,6 +10,6 @@ func Ping(host string, port string, timeout time.Duration) bool {
 	if err != nil {
 		return false
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint: errcheck
 	return true
 }

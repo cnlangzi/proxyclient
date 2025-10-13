@@ -41,14 +41,14 @@ func (u *stdURL) Opaque() string {
 }
 
 func (u *stdURL) Host() string {
-	return u.URL.Hostname()
+	return u.Hostname()
 }
 func (u *stdURL) Port() string {
 	return u.URL.Port()
 }
 
 func (u *stdURL) Protocol() string {
-	return u.URL.Scheme
+	return u.Scheme
 }
 func (u *stdURL) User() string {
 	if u.URL.User == nil {
@@ -65,7 +65,7 @@ func (u *stdURL) Password() string {
 }
 
 func (u *stdURL) Name() string {
-	return u.URL.Fragment
+	return u.Fragment
 }
 
 func ParseURL(u string) (URL, error) {

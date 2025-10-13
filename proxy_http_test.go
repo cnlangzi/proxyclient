@@ -15,7 +15,7 @@ import (
 func TestProxyHTTP(t *testing.T) {
 	// Create a test server that we'll try to access through the proxy
 	targetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello from target server")
+		fmt.Fprintf(w, "Hello from target server") //nolint: errcheck
 	}))
 	defer targetServer.Close()
 
@@ -41,7 +41,7 @@ func TestProxyHTTP(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to make request through proxy: %v", err)
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		// Check if proxy was used
 		if !proxyWasUsed {
@@ -90,7 +90,7 @@ func TestProxyHTTP(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to make request through proxy: %v", err)
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint: errcheck
 
 		// Check if proxy was used
 		if !proxyWasUsed {

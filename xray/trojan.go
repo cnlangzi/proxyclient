@@ -50,7 +50,8 @@ func TrojanToXRay(u *url.URL, port int) ([]byte, int, error) {
 	}
 
 	// Configure TLS
-	if cfg.Security == "tls" {
+	switch cfg.Security {
+	case "tls":
 		streamSettings.TLSSettings = &TLSSettings{
 			ServerName:    cfg.SNI,
 			AllowInsecure: cfg.AllowInsecure, // Use the value read from configuration
@@ -63,7 +64,7 @@ func TrojanToXRay(u *url.URL, port int) ([]byte, int, error) {
 		if cfg.ALPN != "" {
 			streamSettings.TLSSettings.ALPN = strings.Split(cfg.ALPN, ",")
 		}
-	} else if cfg.Security == "xtls" {
+	case "xtls":
 		// Handle XTLS case
 		streamSettings.Security = "xtls"
 		streamSettings.XTLSSettings = &TLSSettings{
@@ -78,7 +79,7 @@ func TrojanToXRay(u *url.URL, port int) ([]byte, int, error) {
 		if cfg.ALPN != "" {
 			streamSettings.XTLSSettings.ALPN = strings.Split(cfg.ALPN, ",")
 		}
-	} else if cfg.Security == "reality" {
+	case "reality":
 		// Handle Reality case
 		streamSettings.Security = "reality"
 		streamSettings.RealitySettings = &RealitySettings{
