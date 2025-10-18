@@ -301,7 +301,7 @@ func configureQUIC(ss *StreamSettings, vmess *VmessConfig) {
 func configureGRPC(ss *StreamSettings, vmess *VmessConfig) {
 	ss.GRPCSettings = &GRPCSettings{
 		ServiceName: vmess.Path,
-		MultiMode:   false,
+		MultiMode:   true,
 	}
 }
 
