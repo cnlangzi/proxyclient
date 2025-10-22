@@ -139,7 +139,7 @@ func VlessToXRay(vu *VlessURL, port int) ([]byte, int, error) {
 	case "grpc":
 		streamSettings.GRPCSettings = &GRPCSettings{
 			ServiceName: cfg.ServiceName,
-			MultiMode:   false,
+			MultiMode:   true,
 		}
 	case "http":
 		streamSettings.HTTPSettings = &HTTPSettings{
