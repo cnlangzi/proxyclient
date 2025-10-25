@@ -2,8 +2,8 @@ github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwTo
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
-github.com/cnlangzi/Xray-core v1.251015.3 h1:Fy/FtqzTJPqOtKvOODSCnYg6WHIrYk0AGL+HwgRvkxA=
-github.com/cnlangzi/Xray-core v1.251015.3/go.mod h1:72ZU/srfutsNPmw9y8SCGRy0iccvshIRk8BNGR8D2Ik=
+github.com/cnlangzi/Xray-core v1.251015.4 h1:1d9WGA6n9ARVI51dW0Fyk8F4t7m3n8hl6usQOXjh1PU=
+github.com/cnlangzi/Xray-core v1.251015.4/go.mod h1:72ZU/srfutsNPmw9y8SCGRy0iccvshIRk8BNGR8D2Ik=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
