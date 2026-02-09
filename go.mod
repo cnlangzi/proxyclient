@@ -3,7 +3,7 @@ module github.com/cnlangzi/proxyclient
 go 1.25
 
 require (
-	github.com/sagernet/sing v0.7.14
+	github.com/sagernet/sing v0.7.18
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.11.1
 	github.com/xtls/xray-core v1.251015.0
