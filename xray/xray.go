@@ -75,12 +75,11 @@ type Server struct {
 }
 
 var (
-	mu            sync.Mutex
-	servers       = make(map[string]*Server)
-	sweeperOnce   sync.Once
-	stopCh        chan struct{}
-	stopSweeper   <-chan struct{} // expose read-only view
-	sweeperWG     sync.WaitGroup
+	mu          sync.Mutex
+	servers     = make(map[string]*Server)
+	sweeperOnce sync.Once
+	stopCh      chan struct{}
+	sweeperWG   sync.WaitGroup
 )
 
 // StartSweeper launches the background sweeper goroutine if not already running.
@@ -89,7 +88,6 @@ func startSweeper() {
 	sweeperOnce.Do(func() {
 		ch := make(chan struct{})
 		stopCh = ch
-		stopSweeper = ch
 		sweeperWG.Add(1)
 		go func(stop <-chan struct{}) {
 			sweeper(stop)
@@ -108,7 +106,6 @@ func StopSweeper() {
 	sweeperWG.Wait()
 	// Reset state so a fresh sweeper can be started in the next test.
 	stopCh = nil
-	stopSweeper = nil
 	sweeperOnce = sync.Once{}
 }
 
