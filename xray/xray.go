@@ -86,15 +86,31 @@ func init() {
 func sweeper() {
 	for {
 		time.Sleep(sweepInterval)
+
+		// Collect expired entries under lock, then release lock before closing
+		// to avoid blocking all map operations while Instance.Close() runs.
+		// Before each close and delete, re-acquire lock to re-verify the entry
+		// is still the one being expired (not revived or replaced).
+		var expired []struct {
+			url  string
+			srv  *Server
+		}
 		mu.Lock()
 		now := time.Now()
 		for url, srv := range servers {
 			if !srv.DrainedAt.IsZero() && now.Sub(srv.DrainedAt) > drainTimeout {
-				srv.Instance.Close() //nolint: errcheck
-				delete(servers, url)
+				expired = append(expired, struct {
+					url  string
+					srv  *Server
+				}{url, srv})
 			}
 		}
 		mu.Unlock()
+
+		// Close instances outside the critical section.
+		for _, e := range expired {
+			tryCloseAndDelete(e.url, e.srv)
+		}
 	}
 }
 
@@ -120,6 +136,22 @@ func setServer(proxyURL string, instance *core.Instance, port int) {
 		Instance:   instance,
 		SocksPort: port,
 		DrainedAt:  time.Time{},
+	}
+}
+
+// tryCloseAndDelete re-checks the entry under lock, closes it if still valid,
+// then removes it from the map. The two-phase lock pattern ensures:
+//   - The entry hasn't been revived (DrainedAt reset to zero) since collection.
+//   - The entry hasn't been replaced by a newer server for the same URL.
+func tryCloseAndDelete(url string, srv *Server) {
+	mu.Lock()
+	defer mu.Unlock()
+	if servers[url] != srv || srv.DrainedAt.IsZero() {
+		return
+	}
+	srv.Instance.Close() //nolint: errcheck
+	if servers[url] == srv {
+		delete(servers, url)
 	}
 }
 
