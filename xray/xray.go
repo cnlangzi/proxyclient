@@ -86,15 +86,32 @@ func init() {
 func sweeper() {
 	for {
 		time.Sleep(sweepInterval)
+
+		// Collect expired URLs under lock, then release lock before closing
+		// to avoid blocking all map operations while Instance.Close() runs.
+		var expired []struct {
+			url  string
+			srv  *Server
+		}
 		mu.Lock()
 		now := time.Now()
 		for url, srv := range servers {
 			if !srv.DrainedAt.IsZero() && now.Sub(srv.DrainedAt) > drainTimeout {
-				srv.Instance.Close() //nolint: errcheck
-				delete(servers, url)
+				expired = append(expired, struct {
+					url  string
+					srv  *Server
+				}{url, srv})
 			}
 		}
 		mu.Unlock()
+
+		// Close instances outside the critical section.
+		for _, e := range expired {
+			e.srv.Instance.Close() //nolint: errcheck
+			mu.Lock()
+			delete(servers, e.url)
+			mu.Unlock()
+		}
 	}
 }
 
