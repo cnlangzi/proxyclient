@@ -200,6 +200,23 @@ func Close(proxyURL string) {
 	delete(servers, proxyURL)
 }
 
+// CloseImmediately synchronously closes the xray instance and removes it from
+// the servers map. Use this when you need immediate cleanup and are certain no
+// other goroutines are using the instance.
+func CloseImmediately(proxyURL string) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	srv, ok := servers[proxyURL]
+	if !ok {
+		return
+	}
+	if srv.Instance != nil {
+		srv.Instance.Close() //nolint: errcheck
+	}
+	delete(servers, proxyURL)
+}
+
 // CloseAll marks all servers as draining immediately. The sweeper will close
 // each one after DrainTimeout.
 func CloseAll() {
