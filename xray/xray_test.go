@@ -57,39 +57,29 @@ func TestGetNonExistent(t *testing.T) {
 	}
 }
 
-func TestCloseRevivesServer(t *testing.T) {
+func TestCloseRemovesServer(t *testing.T) {
 	ResetForTest()
-	DrainTimeout = 50 * time.Millisecond
-	SweepInterval = 10 * time.Millisecond
 
 	// Set up an active server.
 	mu.Lock()
 	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
 	mu.Unlock()
 
-	// Close it — marks DrainedAt non-zero.
+	// Close it — should immediately remove from map.
 	Close("socks5://127.0.0.1:1080")
 
-	// Verify DrainedAt is non-zero (read through map under lock).
+	// Verify server is removed from map.
 	mu.Lock()
-	wasZero := servers["socks5://127.0.0.1:1080"].DrainedAt.IsZero()
+	_, ok := servers["socks5://127.0.0.1:1080"]
 	mu.Unlock()
-	if wasZero {
-		t.Error("expected DrainedAt to be non-zero after Close()")
+	if ok {
+		t.Error("expected server to be removed from map after Close()")
 	}
 
-	// getServer should revive it (reset DrainedAt to zero).
+	// getServer should return nil since server was removed.
 	got := getServer("socks5://127.0.0.1:1080")
-	if got == nil {
-		t.Fatal("expected server after getServer")
-	}
-
-	// Verify DrainedAt is now zero — read through the map under lock.
-	mu.Lock()
-	stillZero := servers["socks5://127.0.0.1:1080"].DrainedAt.IsZero()
-	mu.Unlock()
-	if !stillZero {
-		t.Error("expected DrainedAt to be reset to zero after getServer (revive)")
+	if got != nil {
+		t.Fatal("expected nil after getServer on removed server")
 	}
 }
 
@@ -104,8 +94,8 @@ func TestCloseIdempotent(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	if servers["socks5://127.0.0.1:1080"].DrainedAt.IsZero() {
-		t.Error("expected DrainedAt non-zero")
+	if _, ok := servers["socks5://127.0.0.1:1080"]; ok {
+		t.Error("expected server to be removed from map")
 	}
 }
 
