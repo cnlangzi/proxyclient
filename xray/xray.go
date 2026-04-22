@@ -183,24 +183,10 @@ func tryCloseAndDelete(url string, srv *Server) {
 	}
 }
 
-// Close marks the server as draining. The sweeper goroutine will actually close
-// the xray instance after DrainTimeout elapses, giving in-flight operations a
-// chance to finish cleanly and preventing premature close from leaking goroutines.
+// Close synchronously closes the xray instance and removes it from the servers
+// map. This prevents goroutine and memory leaks when testing high volumes of
+// proxies where the previous delayed-close behavior caused resource accumulation.
 func Close(proxyURL string) {
-	startSweeper()
-	mu.Lock()
-	defer mu.Unlock()
-
-	i, ok := servers[proxyURL]
-	if ok && i.DrainedAt.IsZero() {
-		i.DrainedAt = time.Now()
-	}
-}
-
-// CloseImmediately synchronously closes the xray instance and removes it from
-// the servers map. Use this when you need immediate cleanup and are certain no
-// other goroutines are using the instance.
-func CloseImmediately(proxyURL string) {
 	mu.Lock()
 	defer mu.Unlock()
 
