@@ -145,8 +145,10 @@ func getServer(proxyURL string) *Server {
 	defer mu.Unlock()
 
 	if proxy, ok := servers[proxyURL]; ok {
+		// If server is draining, don't reuse it — return nil and let caller create fresh.
+		// This prevents the "revive" bug where getServer() resets DrainedAt, blocking sweeper.
 		if !proxy.DrainedAt.IsZero() {
-			proxy.DrainedAt = time.Time{}
+			return nil
 		}
 		return proxy
 	}
