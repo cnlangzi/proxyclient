@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"hash/fnv"
 	"sync"
 	"time"
 
@@ -68,6 +69,10 @@ var DrainTimeout = 30 * time.Second
 // SweepInterval is how often the background sweeper runs.
 var SweepInterval = 10 * time.Second
 
+// ShardN is the number of shards for the servers map.
+// A higher value reduces lock contention but uses more memory.
+const ShardN = 256
+
 type Server struct {
 	Instance  *core.Instance
 	SocksPort int
@@ -75,12 +80,18 @@ type Server struct {
 }
 
 var (
-	mu          sync.Mutex
-	servers     = make(map[string]*Server)
-	sweeperOnce sync.Once
-	stopCh      chan struct{}
-	sweeperWG   sync.WaitGroup
+	shardedMu      [ShardN]sync.RWMutex
+	shardedServers [ShardN]map[string]*Server
+	sweeperOnce    sync.Once
+	stopCh         chan struct{}
+	sweeperWG      sync.WaitGroup
 )
+
+func hashShard(proxyURL string) int {
+	h := fnv.New32a()
+	h.Write([]byte(proxyURL))
+	return int(h.Sum32()) % ShardN
+}
 
 // StartSweeper launches the background sweeper goroutine if not already running.
 // It is called automatically by the public API; you do not need to call it.
@@ -117,21 +128,23 @@ func sweeper(stop <-chan struct{}) {
 		case <-time.After(SweepInterval):
 		}
 
-		var expired []struct {
+		expired := []struct {
 			url string
 			srv *Server
-		}
-		mu.Lock()
+		}{}
 		now := time.Now()
-		for url, srv := range servers {
-			if !srv.DrainedAt.IsZero() && now.Sub(srv.DrainedAt) > DrainTimeout {
-				expired = append(expired, struct {
-					url string
-					srv *Server
-				}{url, srv})
+		for idx := range shardedServers {
+			shardedMu[idx].Lock()
+			for url, srv := range shardedServers[idx] {
+				if !srv.DrainedAt.IsZero() && now.Sub(srv.DrainedAt) > DrainTimeout {
+					expired = append(expired, struct {
+						url string
+						srv *Server
+					}{url, srv})
+				}
 			}
+			shardedMu[idx].Unlock()
 		}
-		mu.Unlock()
 
 		for _, e := range expired {
 			tryCloseAndDelete(e.url, e.srv)
@@ -141,10 +154,14 @@ func sweeper(stop <-chan struct{}) {
 
 func getServer(proxyURL string) *Server {
 	startSweeper()
-	mu.Lock()
-	defer mu.Unlock()
+	idx := hashShard(proxyURL)
+	shardedMu[idx].RLock()
+	defer shardedMu[idx].RUnlock()
 
-	if proxy, ok := servers[proxyURL]; ok {
+	if shardedServers[idx] == nil {
+		return nil
+	}
+	if proxy, ok := shardedServers[idx][proxyURL]; ok {
 		// If server is draining, don't reuse it — return nil and let caller create fresh.
 		// This prevents the "revive" bug where getServer() resets DrainedAt, blocking sweeper.
 		if !proxy.DrainedAt.IsZero() {
@@ -157,10 +174,14 @@ func getServer(proxyURL string) *Server {
 
 func setServer(proxyURL string, instance *core.Instance, port int) {
 	startSweeper()
-	mu.Lock()
-	defer mu.Unlock()
+	idx := hashShard(proxyURL)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
 
-	servers[proxyURL] = &Server{
+	if shardedServers[idx] == nil {
+		shardedServers[idx] = make(map[string]*Server)
+	}
+	shardedServers[idx][proxyURL] = &Server{
 		Instance:  instance,
 		SocksPort: port,
 		DrainedAt: time.Time{},
@@ -172,16 +193,17 @@ func setServer(proxyURL string, instance *core.Instance, port int) {
 //   - The entry hasn't been revived (DrainedAt reset to zero) since collection.
 //   - The entry hasn't been replaced by a newer server for the same URL.
 func tryCloseAndDelete(url string, srv *Server) {
-	mu.Lock()
-	defer mu.Unlock()
-	if srv == nil || servers[url] != srv || srv.DrainedAt.IsZero() {
+	idx := hashShard(url)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
+	if srv == nil || shardedServers[idx][url] != srv || srv.DrainedAt.IsZero() {
 		return
 	}
 	if srv.Instance != nil {
 		srv.Instance.Close() //nolint: errcheck
 	}
-	if servers[url] == srv {
-		delete(servers, url)
+	if shardedServers[idx][url] == srv {
+		delete(shardedServers[idx], url)
 	}
 }
 
@@ -189,31 +211,33 @@ func tryCloseAndDelete(url string, srv *Server) {
 // map. This prevents goroutine and memory leaks when testing high volumes of
 // proxies where the previous delayed-close behavior caused resource accumulation.
 func Close(proxyURL string) {
-	mu.Lock()
-	defer mu.Unlock()
+	idx := hashShard(proxyURL)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
 
-	srv, ok := servers[proxyURL]
+	srv, ok := shardedServers[idx][proxyURL]
 	if !ok {
 		return
 	}
 	if srv.Instance != nil {
 		srv.Instance.Close() //nolint: errcheck
 	}
-	delete(servers, proxyURL)
+	delete(shardedServers[idx], proxyURL)
 }
 
 // CloseAll marks all servers as draining immediately. The sweeper will close
 // each one after DrainTimeout.
 func CloseAll() {
 	startSweeper()
-	mu.Lock()
-	defer mu.Unlock()
-
 	now := time.Now()
-	for _, srv := range servers {
-		if srv.DrainedAt.IsZero() {
-			srv.DrainedAt = now
+	for idx := range shardedServers {
+		shardedMu[idx].Lock()
+		for _, srv := range shardedServers[idx] {
+			if srv.DrainedAt.IsZero() {
+				srv.DrainedAt = now
+			}
 		}
+		shardedMu[idx].Unlock()
 	}
 }
 
@@ -221,10 +245,10 @@ func CloseAll() {
 // so tests get a clean state without reassigning the map variable (which would
 // race with any goroutines still iterating over the old map). Safe to call from tests.
 func ResetForTest() {
-	mu.Lock()
-	for url := range servers {
-		delete(servers, url)
+	for idx := range shardedServers {
+		shardedMu[idx].Lock()
+		shardedServers[idx] = nil
+		shardedMu[idx].Unlock()
 	}
-	mu.Unlock()
 	StopSweeper()
 }

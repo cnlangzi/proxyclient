@@ -28,25 +28,55 @@ func itoa(i int) string {
 	return string(buf[p:])
 }
 
+// injectServer inserts a server directly into the sharded map for test injection.
+func injectServer(url string, srv *Server) {
+	idx := hashShard(url)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
+	if shardedServers[idx] == nil {
+		shardedServers[idx] = make(map[string]*Server)
+	}
+	shardedServers[idx][url] = srv
+}
+
+// getFromShard reads a server from the sharded map (for test assertions).
+func getFromShard(url string) *Server {
+	idx := hashShard(url)
+	shardedMu[idx].RLock()
+	defer shardedMu[idx].RUnlock()
+	return shardedServers[idx][url]
+}
+
+// existsInShard checks if a URL exists in the sharded map.
+func existsInShard(url string) bool {
+	return getFromShard(url) != nil
+}
+
+// countAllServers returns total number of servers across all shards.
+func countAllServers() int {
+	n := 0
+	for idx := range shardedServers {
+		shardedMu[idx].RLock()
+		n += len(shardedServers[idx])
+		shardedMu[idx].RUnlock()
+	}
+	return n
+}
+
 func TestSetAndGet(t *testing.T) {
 	ResetForTest()
 	DrainTimeout = 50 * time.Millisecond
 	SweepInterval = 10 * time.Millisecond
 
-	// Inject a server directly into the map to avoid needing a real Instance.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Time{}})
 
 	srv := getServer("socks5://127.0.0.1:1080")
 	if srv == nil {
 		t.Fatal("expected server, got nil")
 	}
-	mu.Lock()
-	if servers["socks5://127.0.0.1:1080"].SocksPort != 1080 {
+	if srv.SocksPort != 1080 {
 		t.Errorf("expected port 1080, got %d", srv.SocksPort)
 	}
-	mu.Unlock()
 }
 
 func TestGetNonExistent(t *testing.T) {
@@ -60,23 +90,14 @@ func TestGetNonExistent(t *testing.T) {
 func TestCloseRemovesServer(t *testing.T) {
 	ResetForTest()
 
-	// Set up an active server.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Time{}})
 
-	// Close it — should immediately remove from map.
 	Close("socks5://127.0.0.1:1080")
 
-	// Verify server is removed from map.
-	mu.Lock()
-	_, ok := servers["socks5://127.0.0.1:1080"]
-	mu.Unlock()
-	if ok {
+	if existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected server to be removed from map after Close()")
 	}
 
-	// getServer should return nil since server was removed.
 	got := getServer("socks5://127.0.0.1:1080")
 	if got != nil {
 		t.Fatal("expected nil after getServer on removed server")
@@ -85,23 +106,18 @@ func TestCloseRemovesServer(t *testing.T) {
 
 func TestCloseIdempotent(t *testing.T) {
 	ResetForTest()
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Time{}})
 
 	Close("socks5://127.0.0.1:1080")
 	Close("socks5://127.0.0.1:1080") // second call must not panic
 
-	mu.Lock()
-	defer mu.Unlock()
-	if _, ok := servers["socks5://127.0.0.1:1080"]; ok {
+	if existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected server to be removed from map")
 	}
 }
 
 func TestCloseNonExistent(t *testing.T) {
 	ResetForTest()
-	// Must not panic.
 	Close("socks5://127.0.0.1:9999")
 }
 
@@ -110,19 +126,16 @@ func TestCloseAll(t *testing.T) {
 	DrainTimeout = 50 * time.Millisecond
 	SweepInterval = 10 * time.Millisecond
 
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
-	servers["socks5://127.0.0.1:1081"] = &Server{SocksPort: 1081, DrainedAt: time.Time{}}
-	servers["socks5://127.0.0.1:1082"] = &Server{SocksPort: 1082, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Time{}})
+	injectServer("socks5://127.0.0.1:1081", &Server{SocksPort: 1081, DrainedAt: time.Time{}})
+	injectServer("socks5://127.0.0.1:1082", &Server{SocksPort: 1082, DrainedAt: time.Time{}})
 
 	CloseAll()
 
-	mu.Lock()
-	defer mu.Unlock()
 	for _, port := range []int{1080, 1081, 1082} {
 		key := "socks5://127.0.0.1:" + itoa(port)
-		if servers[key].DrainedAt.IsZero() {
+		srv := getFromShard(key)
+		if srv == nil || !srv.DrainedAt.IsZero() {
 			t.Errorf("expected server %s to be draining after CloseAll", key)
 		}
 	}
@@ -133,28 +146,15 @@ func TestSweeperRemovesExpired(t *testing.T) {
 	DrainTimeout = 80 * time.Millisecond
 	SweepInterval = 15 * time.Millisecond
 
-	// Inject an expired server directly into the map.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-200 * time.Millisecond)}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-200 * time.Millisecond)})
 
-	// Call getServer to start the sweeper (it is lazy). This also revives
-	// the server (resetting DrainedAt), so use a different URL.
 	getServer("socks5://127.0.0.1:9998")
 
-	// Inject another expired server after sweeper is running.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-200 * time.Millisecond)}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-200 * time.Millisecond)})
 
-	// Wait enough for sweeper to run and remove the entry.
 	time.Sleep(300 * time.Millisecond)
 
-	mu.Lock()
-	_, ok := servers["socks5://127.0.0.1:1080"]
-	mu.Unlock()
-
-	if ok {
+	if existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected server to be removed by sweeper after DrainTimeout")
 	}
 }
@@ -164,25 +164,16 @@ func TestSweeperSkipsRevivedEntry(t *testing.T) {
 	DrainTimeout = 50 * time.Millisecond
 	SweepInterval = 10 * time.Millisecond
 
-	// Entry is old enough to be collected, but we'll revive it before sweeper runs.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-100 * time.Millisecond)}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-100 * time.Millisecond)})
 
-	// Revive via getServer before sweeper picks it up.
 	getServer("socks5://127.0.0.1:1080")
 
 	time.Sleep(200 * time.Millisecond)
 
-	mu.Lock()
-	srv, ok := servers["socks5://127.0.0.1:1080"]
-	stillZero := srv != nil && srv.DrainedAt.IsZero()
-	mu.Unlock()
-
-	if !ok {
+	srv := getFromShard("socks5://127.0.0.1:1080")
+	if srv == nil {
 		t.Error("expected server to still exist after revive")
-	}
-	if !stillZero {
+	} else if !srv.DrainedAt.IsZero() {
 		t.Error("expected DrainedAt to be zero after revive")
 	}
 }
@@ -192,40 +183,28 @@ func TestSweeperSkipsActiveEntry(t *testing.T) {
 	DrainTimeout = 50 * time.Millisecond
 	SweepInterval = 10 * time.Millisecond
 
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Time{}})
 
 	time.Sleep(200 * time.Millisecond)
 
-	mu.Lock()
-	_, ok := servers["socks5://127.0.0.1:1080"]
-	mu.Unlock()
-
-	if !ok {
+	if !existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected active server to NOT be removed")
 	}
 }
 
 func TestTryCloseAndDelete_NotInMap(t *testing.T) {
 	ResetForTest()
-	// Must not panic when url is not in map.
 	tryCloseAndDelete("socks5://127.0.0.1:9999", nil)
 }
 
 func TestTryCloseAndDelete_WrongPointer(t *testing.T) {
 	ResetForTest()
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: time.Now()}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Now()})
 
-	// Try to close with a different (non-existent) pointer.
 	ghost := &Server{SocksPort: 9999, DrainedAt: time.Now()}
 	tryCloseAndDelete("socks5://127.0.0.1:1080", ghost)
 
-	mu.Lock()
-	defer mu.Unlock()
-	if _, ok := servers["socks5://127.0.0.1:1080"]; !ok {
+	if !existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected server to remain when wrong pointer is passed")
 	}
 }
@@ -233,23 +212,16 @@ func TestTryCloseAndDelete_WrongPointer(t *testing.T) {
 func TestTryCloseAndDelete_RevivedEntry(t *testing.T) {
 	ResetForTest()
 	now := time.Now()
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 1080, DrainedAt: now}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: now})
 
-	// Manually revive the entry (simulate getServer racing with sweeper).
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"].DrainedAt = time.Time{}
-	mu.Unlock()
+	idx := hashShard("socks5://127.0.0.1:1080")
+	shardedMu[idx].Lock()
+	shardedServers[idx]["socks5://127.0.0.1:1080"].DrainedAt = time.Time{}
+	shardedMu[idx].Unlock()
 
-	// tryCloseAndDelete should see DrainedAt==0 and skip.
 	tryCloseAndDelete("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: now})
 
-	mu.Lock()
-	_, ok := servers["socks5://127.0.0.1:1080"]
-	mu.Unlock()
-
-	if !ok {
+	if !existsInShard("socks5://127.0.0.1:1080") {
 		t.Error("expected server to remain after tryCloseAndDelete on revived entry")
 	}
 }
@@ -257,23 +229,14 @@ func TestTryCloseAndDelete_RevivedEntry(t *testing.T) {
 func TestTryCloseAndDelete_ReplacedEntry(t *testing.T) {
 	ResetForTest()
 	old := &Server{SocksPort: 1080, DrainedAt: time.Now()}
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = old
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", old)
 
-	// Replace with a new server for same URL.
-	mu.Lock()
-	servers["socks5://127.0.0.1:1080"] = &Server{SocksPort: 9999, DrainedAt: time.Time{}}
-	mu.Unlock()
+	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 9999, DrainedAt: time.Time{}})
 
-	// tryCloseAndDelete with old pointer should not delete the new entry.
 	tryCloseAndDelete("socks5://127.0.0.1:1080", old)
 
-	mu.Lock()
-	srv, ok := servers["socks5://127.0.0.1:1080"]
-	mu.Unlock()
-
-	if !ok {
+	srv := getFromShard("socks5://127.0.0.1:1080")
+	if srv == nil {
 		t.Fatal("expected server to still exist")
 	}
 	if srv.SocksPort != 9999 {
@@ -292,9 +255,7 @@ func TestConcurrentGetSetClose(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			url := "socks5://127.0.0.1:" + itoa(1000+idx%10)
-			mu.Lock()
-			servers[url] = &Server{SocksPort: 1000 + idx%10, DrainedAt: time.Time{}}
-			mu.Unlock()
+			injectServer(url, &Server{SocksPort: 1000+idx%10, DrainedAt: time.Time{}})
 			_ = getServer(url)
 			Close(url)
 			_ = getServer(url)
@@ -302,12 +263,7 @@ func TestConcurrentGetSetClose(t *testing.T) {
 	}
 	wg.Wait()
 
-	// No crash = pass. Verify map is consistent.
-	mu.Lock()
-	defer mu.Unlock()
-	for url, srv := range servers {
-		if url == "" || srv == nil {
-			t.Errorf("nil entry in map: url=%q srv=%v", url, srv)
-		}
+	if n := countAllServers(); n > 0 {
+		t.Errorf("expected no servers after concurrent get/set/close, found %d", n)
 	}
 }
