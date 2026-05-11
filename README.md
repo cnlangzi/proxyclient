@@ -39,8 +39,10 @@ package main
 import (
     "fmt"
     "github.com/cnlangzi/proxyclient"
-    // import v5 vmess/vless
-    _ "github.com/cnlangzi/proxyclient/v2ray"
+    // import v5 vmess/vless/trojan
+    _ "github.com/cnlangzi/proxyclient/xray"
+    // import ss
+    _ "github.com/cnlangzi/proxyclient/ss"
 )
 
 func main() {
