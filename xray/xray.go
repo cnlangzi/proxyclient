@@ -1,7 +1,6 @@
 package xray
 
 import (
-	"hash/fnv"
 	"sync"
 	"time"
 
@@ -88,9 +87,13 @@ var (
 )
 
 func hashShard(proxyURL string) int {
-	h := fnv.New32a()
-	h.Write([]byte(proxyURL))
-	return int(h.Sum32()) % ShardN
+	// Lightweight non-allocating FNV-1a style hash specialized for strings.
+	var h uint32 = 2166136261
+	for i := 0; i < len(proxyURL); i++ {
+		h ^= uint32(proxyURL[i])
+		h *= 16777619
+	}
+	return int(h % uint32(ShardN))
 }
 
 // StartSweeper launches the background sweeper goroutine if not already running.
@@ -134,7 +137,7 @@ func sweeper(stop <-chan struct{}) {
 		}{}
 		now := time.Now()
 		for idx := range shardedServers {
-			shardedMu[idx].Lock()
+			shardedMu[idx].RLock()
 			for url, srv := range shardedServers[idx] {
 				if !srv.DrainedAt.IsZero() && now.Sub(srv.DrainedAt) > DrainTimeout {
 					expired = append(expired, struct {
@@ -143,7 +146,7 @@ func sweeper(stop <-chan struct{}) {
 					}{url, srv})
 				}
 			}
-			shardedMu[idx].Unlock()
+			shardedMu[idx].RUnlock()
 		}
 
 		for _, e := range expired {
@@ -229,17 +232,18 @@ func Close(proxyURL string) {
 // the servers map. Use this when you need immediate cleanup and are certain no
 // other goroutines are using the instance.
 func CloseImmediately(proxyURL string) {
-	mu.Lock()
-	defer mu.Unlock()
+	idx := hashShard(proxyURL)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
 
-	srv, ok := servers[proxyURL]
+	srv, ok := shardedServers[idx][proxyURL]
 	if !ok {
 		return
 	}
 	if srv.Instance != nil {
 		srv.Instance.Close() //nolint: errcheck
 	}
-	delete(servers, proxyURL)
+	delete(shardedServers[idx], proxyURL)
 }
 
 // CloseAll marks all servers as draining immediately. The sweeper will close

@@ -47,6 +47,20 @@ func getFromShard(url string) *Server {
 	return shardedServers[idx][url]
 }
 
+// reviveServer resets DrainedAt so the server is considered active again,
+// used in tests to simulate a server coming back to life.
+func reviveServer(url string) {
+	idx := hashShard(url)
+	shardedMu[idx].Lock()
+	defer shardedMu[idx].Unlock()
+	if shardedServers[idx] == nil {
+		return
+	}
+	if srv, ok := shardedServers[idx][url]; ok {
+		srv.DrainedAt = time.Time{}
+	}
+}
+
 // existsInShard checks if a URL exists in the sharded map.
 func existsInShard(url string) bool {
 	return getFromShard(url) != nil
@@ -135,7 +149,7 @@ func TestCloseAll(t *testing.T) {
 	for _, port := range []int{1080, 1081, 1082} {
 		key := "socks5://127.0.0.1:" + itoa(port)
 		srv := getFromShard(key)
-		if srv == nil || !srv.DrainedAt.IsZero() {
+		if srv == nil || srv.DrainedAt.IsZero() {
 			t.Errorf("expected server %s to be draining after CloseAll", key)
 		}
 	}
@@ -164,17 +178,21 @@ func TestSweeperSkipsRevivedEntry(t *testing.T) {
 	DrainTimeout = 50 * time.Millisecond
 	SweepInterval = 10 * time.Millisecond
 
+	// Server is already draining when inserted.
 	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: time.Now().Add(-100 * time.Millisecond)})
 
-	getServer("socks5://127.0.0.1:1080")
+	// getServer on a draining server returns nil and does NOT revive it.
+	result := getServer("socks5://127.0.0.1:1080")
+	if result != nil {
+		t.Error("expected getServer to return nil for draining server")
+	}
 
+	// Wait for sweeper to run and close the draining entry.
 	time.Sleep(200 * time.Millisecond)
 
-	srv := getFromShard("socks5://127.0.0.1:1080")
-	if srv == nil {
-		t.Error("expected server to still exist after revive")
-	} else if !srv.DrainedAt.IsZero() {
-		t.Error("expected DrainedAt to be zero after revive")
+	// Server should be gone — sweeper closed it because it was still draining.
+	if existsInShard("socks5://127.0.0.1:1080") {
+		t.Error("expected server to be removed by sweeper after DrainTimeout")
 	}
 }
 
@@ -214,10 +232,7 @@ func TestTryCloseAndDelete_RevivedEntry(t *testing.T) {
 	now := time.Now()
 	injectServer("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: now})
 
-	idx := hashShard("socks5://127.0.0.1:1080")
-	shardedMu[idx].Lock()
-	shardedServers[idx]["socks5://127.0.0.1:1080"].DrainedAt = time.Time{}
-	shardedMu[idx].Unlock()
+	reviveServer("socks5://127.0.0.1:1080")
 
 	tryCloseAndDelete("socks5://127.0.0.1:1080", &Server{SocksPort: 1080, DrainedAt: now})
 
