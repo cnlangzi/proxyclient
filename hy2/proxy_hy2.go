@@ -18,12 +18,13 @@ func init() {
 	proxyclient.RegisterProxy("hy2", DialHY2)
 }
 
-// obfsConnFactory implements client.ConnFactory interface
-// It wraps raw UDP connections with Salamander or Gecko obfuscation
+// obfsConnFactory implements client.ConnFactory interface.
+// It wraps raw UDP connections with Salamander or Gecko obfuscation.
+// The addr parameter is not used since we bind to a wildcard address
+// and the actual destination is determined by the QUIC transport.
 type obfsConnFactory struct {
-	ServerAddr       net.Addr
-	ObfsType         string // "salamander" or "gecko"
-	ObfsPassword     string
+	ObfsType          string // "salamander" or "gecko"
+	ObfsPassword      string
 	ObfsMinPacketSize int
 	ObfsMaxPacketSize int
 }
@@ -36,11 +37,13 @@ func (f *obfsConnFactory) New(addr net.Addr) (net.PacketConn, error) {
 		return nil, err
 	}
 
+	// Ensure conn is closed if obfuscation setup fails
 	var obfuscated net.PacketConn
 	switch f.ObfsType {
 	case "salamander":
 		obfuscated, err = obfs.WrapPacketConnSalamander(conn, []byte(f.ObfsPassword))
 		if err != nil {
+			conn.Close() //nolint: errcheck
 			return nil, err
 		}
 	case "gecko":
@@ -50,6 +53,7 @@ func (f *obfsConnFactory) New(addr net.Addr) (net.PacketConn, error) {
 			MaxPacketSize: f.ObfsMaxPacketSize,
 		})
 		if err != nil {
+			conn.Close() //nolint: errcheck
 			return nil, err
 		}
 	default:
@@ -95,7 +99,6 @@ func DialHY2(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 	// Apply obfuscation if configured
 	if cfg.ObfsType != "" && cfg.ObfsPassword != "" {
 		hyConfig.ConnFactory = &obfsConnFactory{
-			ServerAddr:        serverAddr,
 			ObfsType:          cfg.ObfsType,
 			ObfsPassword:      cfg.ObfsPassword,
 			ObfsMinPacketSize: cfg.ObfsMinPacketSize,
@@ -149,10 +152,12 @@ func parseBandwidthValue(s string) (uint64, error) {
 
 	// Split into number and unit
 	var numStr, unit string
+	foundDigit := false
 	for i := 0; i < len(s); i++ {
 		if s[i] >= '0' && s[i] <= '9' || s[i] == '.' {
 			numStr += string(s[i])
-		} else {
+			foundDigit = true
+		} else if foundDigit {
 			unit = strings.TrimSpace(s[i:])
 			break
 		}
@@ -162,16 +167,18 @@ func parseBandwidthValue(s string) (uint64, error) {
 		return 0, fmt.Errorf("no number found in bandwidth value")
 	}
 
-	var multiplier uint64 = 1
+	var multiplier uint64
 	switch {
-	case strings.HasPrefix(unit, "gbps"):
-		multiplier = 1_000_000_000
-	case strings.HasPrefix(unit, "mbps"):
-		multiplier = 1_000_000
-	case strings.HasPrefix(unit, "kbps"):
-		multiplier = 1_000
 	case unit == "" || strings.HasPrefix(unit, "bps"):
 		multiplier = 1
+	case strings.HasPrefix(unit, "kbps"):
+		multiplier = 1_000
+	case strings.HasPrefix(unit, "mbps"):
+		multiplier = 1_000_000
+	case strings.HasPrefix(unit, "gbps"):
+		multiplier = 1_000_000_000
+	default:
+		return 0, fmt.Errorf("unsupported bandwidth unit: %q", unit)
 	}
 
 	var val float64

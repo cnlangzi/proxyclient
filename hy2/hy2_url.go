@@ -14,24 +14,26 @@ func init() {
 	proxyclient.RegisterParser("hysteria2", func(u *url.URL) (proxyclient.URL, error) {
 		return ParseHY2URL(u)
 	})
+	proxyclient.RegisterParser("hy2", func(u *url.URL) (proxyclient.URL, error) {
+		return ParseHY2URL(u)
+	})
 }
 
 // HY2Config stores Hysteria2 URL parameters
 type HY2Config struct {
-	Auth             string
-	Address          string
-	Port             int
-	SNI              string
-	Insecure         bool
-	ALPN             string
-	ObfsType         string // "salamander" or "gecko"
-	ObfsPassword     string
+	Auth              string
+	Address           string
+	Port              int
+	SNI               string
+	Insecure          bool
+	ObfsType          string // "salamander" or "gecko"
+	ObfsPassword      string
 	ObfsMinPacketSize int
 	ObfsMaxPacketSize int
-	Up               string // e.g., "100 mbps"
-	Down             string // e.g., "200 mbps"
-	FastOpen         bool
-	Remark           string
+	Up                string // e.g., "100 mbps"
+	Down              string // e.g., "200 mbps"
+	FastOpen          bool
+	Remark            string
 
 	raw *url.URL `json:"-"`
 }
@@ -51,7 +53,7 @@ func (h *HY2URL) Opaque() string {
 	if h.Config == nil || h.Config.raw == nil {
 		return ""
 	}
-	return strings.TrimPrefix(h.Config.raw.String(), "hysteria2://")
+	return strings.TrimPrefix(h.Config.raw.String(), h.Config.raw.Scheme+"://")
 }
 
 func (h *HY2URL) Host() string {
@@ -80,6 +82,9 @@ func (h *HY2URL) Password() string {
 }
 
 func (h *HY2URL) Protocol() string {
+	if h.Config != nil && h.Config.raw != nil {
+		return h.Config.raw.Scheme
+	}
 	return "hysteria2"
 }
 
@@ -90,8 +95,7 @@ func (h *HY2URL) Name() string {
 	return h.Config.Remark
 }
 
-// ParseHY2URL parses hysteria2:// URL
-// hysteria2://auth@host:port/?sni=xxx&obfs=salamander&obfs-password=xxx&...
+// ParseHY2URL parses hysteria2:// or hy2:// URL
 func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 	// Extract auth (password)
 	var auth string
@@ -120,6 +124,7 @@ func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 		Address: host,
 		Port:    port,
 		Remark:  u.Fragment,
+		raw:     u,
 	}
 
 	// Parse query parameters
@@ -133,10 +138,6 @@ func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 
 	if v := query.Get("insecure"); v != "" {
 		config.Insecure = strings.ToLower(v) == "true" || v == "1"
-	}
-
-	if v := query.Get("alpn"); v != "" {
-		config.ALPN = v
 	}
 
 	// Obfuscation settings
@@ -168,8 +169,6 @@ func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 	if v := query.Get("fastopen"); v != "" {
 		config.FastOpen = strings.ToLower(v) == "true" || v == "1"
 	}
-
-	config.raw = u
 
 	return &HY2URL{Config: config}, nil
 }

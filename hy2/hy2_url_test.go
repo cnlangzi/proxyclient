@@ -58,17 +58,6 @@ func TestParseHY2URL(t *testing.T) {
 			},
 		},
 		{
-			name:  "with alpn",
-			input: "hysteria2://password@example.com:443/?alpn=h3",
-			want: &HY2Config{
-				Auth:    "password",
-				Address: "example.com",
-				Port:    443,
-				SNI:     "example.com",
-				ALPN:    "h3",
-			},
-		},
-		{
 			name:  "with salamander obfuscation",
 			input: "hysteria2://password@example.com:443/?obfs=salamander&obfs-password=secret123",
 			want: &HY2Config{
@@ -140,14 +129,13 @@ func TestParseHY2URL(t *testing.T) {
 		},
 		{
 			name:  "all parameters combined",
-			input: "hysteria2://mypassword@example.com:8443/?sni=custom.com&insecure=true&alpn=h3&obfs=salamander&obfs-password=obfs123&up=50 mbps&down=100 mbps&fastopen=true#server1",
+			input: "hysteria2://mypassword@example.com:8443/?sni=custom.com&insecure=true&obfs=salamander&obfs-password=obfs123&up=50 mbps&down=100 mbps&fastopen=true#server1",
 			want: &HY2Config{
 				Auth:         "mypassword",
 				Address:      "example.com",
 				Port:         8443,
 				SNI:          "custom.com",
 				Insecure:     true,
-				ALPN:         "h3",
 				ObfsType:     "salamander",
 				ObfsPassword: "obfs123",
 				Up:           "50 mbps",
@@ -200,7 +188,6 @@ func TestParseHY2URL(t *testing.T) {
 			assert.Equal(t, tt.want.Port, cfg.Port, "Port mismatch")
 			assert.Equal(t, tt.want.SNI, cfg.SNI, "SNI mismatch")
 			assert.Equal(t, tt.want.Insecure, cfg.Insecure, "Insecure mismatch")
-			assert.Equal(t, tt.want.ALPN, cfg.ALPN, "ALPN mismatch")
 			assert.Equal(t, tt.want.ObfsType, cfg.ObfsType, "ObfsType mismatch")
 			assert.Equal(t, tt.want.ObfsPassword, cfg.ObfsPassword, "ObfsPassword mismatch")
 			assert.Equal(t, tt.want.ObfsMinPacketSize, cfg.ObfsMinPacketSize, "ObfsMinPacketSize mismatch")
@@ -233,6 +220,26 @@ func TestHY2URLInterface(t *testing.T) {
 	assert.Equal(t, "hysteria2", raw.Scheme)
 }
 
+func TestHY2URLInterfaceHy2(t *testing.T) {
+	u, err := url.Parse("hy2://password@example.com:443/?sni=test.com&insecure=true#my-server")
+	assert.NoError(t, err)
+
+	hy2URL, err := ParseHY2URL(u)
+	assert.NoError(t, err)
+
+	// Test all interface methods - scheme should be "hy2" not "hysteria2"
+	assert.Equal(t, "hy2", hy2URL.Protocol())
+	assert.Equal(t, "example.com", hy2URL.Host())
+	assert.Equal(t, "443", hy2URL.Port())
+	assert.Equal(t, "password", hy2URL.Password())
+	assert.Equal(t, "", hy2URL.User())
+	assert.Equal(t, "my-server", hy2URL.Name())
+
+	raw := hy2URL.Raw()
+	assert.NotNil(t, raw)
+	assert.Equal(t, "hy2", raw.Scheme)
+}
+
 func TestHY2URLOpaque(t *testing.T) {
 	u, err := url.Parse("hysteria2://password@example.com:443/")
 	assert.NoError(t, err)
@@ -242,6 +249,18 @@ func TestHY2URLOpaque(t *testing.T) {
 
 	// Opaque should return the URL without the scheme prefix
 	assert.Contains(t, hy2URL.Opaque(), "example.com:443")
+}
+
+func TestHY2URLOpaqueHy2(t *testing.T) {
+	u, err := url.Parse("hy2://password@example.com:443/")
+	assert.NoError(t, err)
+
+	hy2URL, err := ParseHY2URL(u)
+	assert.NoError(t, err)
+
+	// Opaque should strip the scheme prefix correctly for hy2://
+	assert.Contains(t, hy2URL.Opaque(), "example.com:443")
+	assert.NotContains(t, hy2URL.Opaque(), "hy2://")
 }
 
 func TestInsecureFalse(t *testing.T) {
@@ -278,5 +297,36 @@ func TestBothSchemesRegistered(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "example.com", parsed.Config.Address)
 		assert.Equal(t, 443, parsed.Config.Port)
+	}
+}
+
+func TestParseBandwidthValue(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected uint64
+		wantErr  bool
+	}{
+		{"100 mbps", 100_000_000, false},
+		{"50 Mbps", 50_000_000, false},
+		{"10 kbps", 10_000, false},
+		{"1000 bps", 1_000, false},
+		{"1 gbps", 1_000_000_000, false},
+		{"1", 1, false},
+		{"", 0, true},                    // no number
+		{"100xyz", 0, true},             // unknown unit
+		{"100 m", 0, true},             // unknown unit (m alone is not mbps)
+		{"100.5 mbps", 100_500_000, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseBandwidthValue(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, got)
+			}
+		})
 	}
 }
