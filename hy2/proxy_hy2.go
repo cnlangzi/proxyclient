@@ -30,7 +30,7 @@ type obfsConnFactory struct {
 }
 
 // New creates a new obfuscated UDP connection
-func (f *obfsConnFactory) New(addr net.Addr) (net.PacketConn, error) {
+func (f *obfsConnFactory) New(_ net.Addr) (net.PacketConn, error) {
 	// Create raw UDP conn - each call gets a fresh connection
 	conn, err := net.ListenUDP("udp", nil)
 	if err != nil {

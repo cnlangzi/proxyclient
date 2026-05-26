@@ -109,9 +109,13 @@ func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 	// Extract host and port
 	host, portStr, err := net.SplitHostPort(u.Host)
 	if err != nil {
-		// If no port specified, use default 443
-		host = u.Host
-		portStr = "443"
+		if strings.Contains(err.Error(), "missing port") {
+			// Only default to port 443 if port is missing, not for other errors
+			host = u.Host
+			portStr = "443"
+		} else {
+			return nil, fmt.Errorf("failed to parse host: %w", err)
+		}
 	}
 
 	port, err := strconv.Atoi(portStr)
@@ -148,14 +152,18 @@ func ParseHY2URL(u *url.URL) (*HY2URL, error) {
 		config.ObfsPassword = v
 	}
 	if v := query.Get("obfs-min-packet-size"); v != "" {
-		if ps, err := strconv.Atoi(v); err == nil {
-			config.ObfsMinPacketSize = ps
+		ps, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid obfs-min-packet-size: %w", err)
 		}
+		config.ObfsMinPacketSize = ps
 	}
 	if v := query.Get("obfs-max-packet-size"); v != "" {
-		if ps, err := strconv.Atoi(v); err == nil {
-			config.ObfsMaxPacketSize = ps
+		ps, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid obfs-max-packet-size: %w", err)
 		}
+		config.ObfsMaxPacketSize = ps
 	}
 
 	// Bandwidth settings
