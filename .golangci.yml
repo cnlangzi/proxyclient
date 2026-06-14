@@ -1,0 +1,21 @@
+# golangci-lint v2 configuration for cnlangzi/proxyclient.
+#
+# Goals:
+#   - Enable the standard rule set on production code.
+#   - Skip lint on test files entirely. Real test bugs are caught
+#     by the `go test` step in the same CI workflow.
+#   - Exclude generated files and coverage reports from analysis.
+version: "2"
+
+run:
+  # Skip _test.go files. This is the v2-blessed way to opt out of
+  # lint on tests; it is faster and clearer than the v1
+  # `exclusions.rules[].path: _test.go$` workaround.
+  tests: false
+  timeout: 5m
+
+linters:
+  default: standard
+  exclusions:
+    paths:
+      - coverage.txt
