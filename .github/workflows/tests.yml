@@ -26,7 +26,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.5
+          version: v2.12
+          args: --timeout=5m
   tests:
     name: Tests
     runs-on: ubuntu-latest

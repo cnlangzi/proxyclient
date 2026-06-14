@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -56,27 +55,42 @@ func DialSS(u *url.URL, o *proxyclient.Options) (http.RoundTripper, error) {
 
 		destination := metadata.ParseSocksaddr(addr)
 
+		// Always close the underlying TCP socket on any failure path
+		// (including panic) so a panic in m.DialConn cannot leak the fd
+		// and starve the caller's worker pool. See panic-recovery notes
+		// in proxyclient.WithRecover.
+		//
+		// The cleanup is centralised via defer so all current and future
+		// error/panic paths are covered. Successful promotion of conn
+		// to ssConn is signalled by setting conn = nil, which makes the
+		// deferred close a no-op.
+		defer func() {
+			if conn != nil {
+				conn.Close() // nolint: errcheck
+			}
+		}()
+
 		ssConn, err := proxyclient.WithRecover(func() (net.Conn, error) {
-			conn, err := m.DialConn(conn, destination)
+			c, err := m.DialConn(conn, destination)
 			if err != nil {
 				return nil, err
 			}
 
-			return proxyclient.SetDeadline(conn, o.Timeout, tr.DisableKeepAlives)
+			return proxyclient.SetDeadline(c, o.Timeout, tr.DisableKeepAlives)
 		})
 
 		if ssConn == nil {
-			conn.Close() // nolint: errcheck
-			log.Printf("ss: panic on %s \n", su.Raw().String())
-			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
+			// panic recovered by WithRecover
+			return nil, fmt.Errorf("ss: dial panic on %s", su.Raw().String())
 		}
 
 		if err != nil {
-			conn.Close() // nolint: errcheck
-			log.Printf("ss: panic on %s \n", su.Raw().String())
 			return nil, fmt.Errorf("failed to create Shadowsocks connection: %w", err)
 		}
 
+		// Hand ownership of conn over to ssConn; the deferred close
+		// becomes a no-op because conn is now nil.
+		conn = nil
 		return ssConn, nil
 	}
 
