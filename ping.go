@@ -79,9 +79,14 @@ func capTimeout(timeout time.Duration) time.Duration {
 	return timeout
 }
 
-// pingTCP dials host:port over TCP with a short deadline. SetReadDeadline
-// guards against half-open connections that accept the SYN but never
-// respond to subsequent reads (some load balancers do this).
+// pingTCP dials host:port over TCP with a short deadline.
+//
+// IPv4-only: FallbackDelay is set to -1 to disable RFC 6555
+// happy-eyeballs. This matches the historical behaviour callers rely
+// on (proxy URLs are typically resolved to a single A record), but
+// it does mean IPv6-only targets will fail. If IPv6 support is
+// needed in the future, expose a "v4 only" flag on PingWithScheme
+// and pass it through.
 func pingTCP(host string, port string, timeout time.Duration) bool {
 	d := net.Dialer{
 		Timeout:       timeout,
@@ -98,9 +103,6 @@ func pingTCP(host string, port string, timeout time.Duration) bool {
 	if err != nil {
 		return false
 	}
-	// Close the read side immediately so any half-open state is detected
-	// as a read error rather than blocking the caller.
-	_ = conn.SetReadDeadline(time.Now())
 	_ = conn.Close()
 	return true
 }
@@ -122,9 +124,12 @@ func pingUDP(host string, port string, timeout time.Duration) bool {
 	defer conn.Close() //nolint: errcheck
 
 	_ = conn.SetDeadline(time.Now().Add(timeout))
-	// 0-byte datagram is enough to trigger ICMP Port Unreachable on a
-	// closed port; legitimate UDP services ignore empty payloads.
-	if _, err := conn.Write(nil); err != nil {
+	// Send a 1-byte datagram (not nil) so the kernel actually emits a UDP
+	// packet; Go's net.UDPConn.Write(nil) returns (0, nil) without
+	// sending anything on some platforms, which would defeat the
+	// ICMP Port Unreachable fast-fail we rely on. Legitimate UDP
+	// services ignore a single 0x00 byte just like an empty payload.
+	if _, err := conn.Write([]byte{0}); err != nil {
 		return false
 	}
 	// Best-effort read; we do not require a response.
