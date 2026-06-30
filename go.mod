@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/apernet/hysteria/core/v2 v2.9.3
-	github.com/apernet/hysteria/extras/v2 v2.9.2
+	github.com/apernet/hysteria/extras/v2 v2.9.3
 	github.com/sagernet/sing v0.8.11
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.11.1

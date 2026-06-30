@@ -2,8 +2,8 @@ github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwTo
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/apernet/hysteria/core/v2 v2.9.3 h1:BwJM1nCY3oLG7KQE32HRJczQAfSKgYfIw+qa/USu4do=
 github.com/apernet/hysteria/core/v2 v2.9.3/go.mod h1:Iy4fgHAVfF8EmWWHqCfs0TPmW+bpbYslyEkasgUwdx8=
-github.com/apernet/hysteria/extras/v2 v2.9.2 h1:k/nF6M62U3thxS8en87CP60knaU51LN+eWilURvmHwo=
-github.com/apernet/hysteria/extras/v2 v2.9.2/go.mod h1:61dvzDe1Lbp/KDIW4pcOoDbLrBpissyM8WGnl8cWDfQ=
+github.com/apernet/hysteria/extras/v2 v2.9.3 h1:tQRh3YzUMgZmG1bEnDnJoZDiccx49v/S3nkBmRmrUuk=
+github.com/apernet/hysteria/extras/v2 v2.9.3/go.mod h1:hX4Gb19sjLyR+UFlGizVCzRteIraa0Y2d0lVg6y7FwU=
 github.com/apernet/quic-go v0.60.1-0.20260618182935-599b15a1fa26 h1:LTC+O+b5tux3RUzqqepNOkdMMI264O+mG09Y5j9Cf7Y=
 github.com/apernet/quic-go v0.60.1-0.20260618182935-599b15a1fa26/go.mod h1:B5eVtZG4ZkCvDZQNaOAAEZEtdBC7DIj56Q9EIb0mGAQ=
 github.com/cloudflare/circl v1.6.2 h1:hL7VBpHHKzrV5WTfHCaBsgx/HGbBYlgrwvNXEVDYYsQ=
