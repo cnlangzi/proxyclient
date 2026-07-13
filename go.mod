@@ -9,7 +9,7 @@ require (
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.11.1
 	github.com/xtls/xray-core v1.251015.0
-	golang.org/x/net v0.56.0
+	golang.org/x/net v0.57.0
 	h12.io/socks v1.0.3
 )
 
