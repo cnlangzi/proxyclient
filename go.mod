@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/apernet/hysteria/core/v2 v2.10.0
-	github.com/apernet/hysteria/extras/v2 v2.9.3
+	github.com/apernet/hysteria/extras/v2 v2.10.0
 	github.com/sagernet/sing v0.8.11
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.11.1
@@ -31,7 +31,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.58.0 // indirect
-	github.com/refraction-networking/utls v1.8.1 // indirect
+	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
