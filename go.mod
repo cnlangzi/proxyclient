@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/apernet/hysteria/core/v2 v2.12.0
-	github.com/apernet/hysteria/extras/v2 v2.10.0
+	github.com/apernet/hysteria/extras/v2 v2.12.0
 	github.com/sagernet/sing v0.8.12
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.11.1
@@ -25,7 +25,7 @@ require (
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
-	github.com/miekg/dns v1.1.69 // indirect
+	github.com/miekg/dns v1.1.72 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pires/go-proxyproto v0.8.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
