@@ -3,7 +3,7 @@ module github.com/cnlangzi/proxyclient
 go 1.25.0
 
 require (
-	github.com/apernet/hysteria/core/v2 v2.12.0
+	github.com/apernet/hysteria/core/v2 v2.12.1
 	github.com/apernet/hysteria/extras/v2 v2.12.0
 	github.com/sagernet/sing v0.8.12
 	github.com/sagernet/sing-shadowsocks v0.2.8
