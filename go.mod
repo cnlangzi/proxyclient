@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/apernet/hysteria/core/v2 v2.12.1
 	github.com/apernet/hysteria/extras/v2 v2.12.2
-	github.com/sagernet/sing v0.8.13
+	github.com/sagernet/sing v0.8.14
 	github.com/sagernet/sing-shadowsocks v0.2.8
 	github.com/stretchr/testify v1.12.0
 	github.com/xtls/xray-core v1.251015.0
