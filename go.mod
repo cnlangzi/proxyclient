@@ -3,7 +3,7 @@ module github.com/cnlangzi/proxyclient
 go 1.26.0
 
 require (
-	github.com/apernet/hysteria/core/v2 v2.12.3
+	github.com/apernet/hysteria/core/v2 v2.13.0
 	github.com/apernet/hysteria/extras/v2 v2.12.3
 	github.com/sagernet/sing v0.9.6
 	github.com/sagernet/sing-shadowsocks v0.2.8
@@ -15,7 +15,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
-	github.com/apernet/quic-go v0.62.1-0.20260912175848-73339f7edbb9 // indirect
+	github.com/apernet/quic-go v0.63.1-0.20261004180939-a10df75c260c // indirect
 	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/dgryski/go-metro v0.0.0-20250106013310-edb8663e5e33 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344 // indirect
